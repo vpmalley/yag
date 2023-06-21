@@ -13,7 +13,7 @@ import fr.vpm.yag.device.model.DevicePhoto
 import java.util.Date
 
 class DeviceAlbumsRetriever {
-    fun getLocalAlbums(activity: Activity, onAlbumsRetrievedListener: OnAlbumsRetrievedListener) {
+    suspend fun getLocalAlbums(activity: Activity): Collection<Album> {
 
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
@@ -37,8 +37,9 @@ class DeviceAlbumsRetriever {
         )?.use { localAlbumsCursor ->
             val albumsById = mapAlbums(localAlbumsCursor)
             Log.d("bg-media", "Got ${albumsById.size} albums")
-            onAlbumsRetrievedListener.onAlbumsRetrieved(albumsById.values)
+            return albumsById.values
         }
+        return emptyList()
     }
 
     private fun mapAlbums(localImageCursor: Cursor): Map<String, Album> {
