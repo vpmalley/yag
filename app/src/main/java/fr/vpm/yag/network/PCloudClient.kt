@@ -11,14 +11,13 @@ import kotlinx.coroutines.flow.firstOrNull
  */
 class PCloudClient {
 
-    private val pCloudRepository = SettingsRepository()
 
-    suspend fun getPCloudClient(context: Context): ApiClient? {
+    suspend fun getPCloudClient(): ApiClient? {
         return if (apiClient != null) {
             apiClient
         } else {
-            val apiHost = pCloudRepository.getApiHostFlow(context).firstOrNull()
-            val oAuthToken = pCloudRepository.getOAuthTokenFlow(context).firstOrNull()
+            val apiHost = pCloudRepository.getApiHostFlow().firstOrNull()
+            val oAuthToken = pCloudRepository.getOAuthTokenFlow().firstOrNull()
             if (apiHost != null && oAuthToken != null) {
                 val authenticator = Authenticators.newOAuthAuthenticator(oAuthToken)
                 apiClient = PCloudSdk.newClientBuilder().apiHost(apiHost)

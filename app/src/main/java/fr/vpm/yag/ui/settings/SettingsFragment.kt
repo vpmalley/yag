@@ -11,8 +11,8 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.pcloud.sdk.AuthorizationActivity
 import com.pcloud.sdk.AuthorizationRequest
+import fr.vpm.yag.MainActivity
 import fr.vpm.yag.databinding.FragmentSettingsBinding
-import kotlinx.coroutines.flow.collect
 
 class SettingsFragment : Fragment() {
 
@@ -22,7 +22,7 @@ class SettingsFragment : Fragment() {
     // onDestroyView.
     private val binding get() = _binding!!
 
-    private val settingsViewModel: SettingsViewModel by activityViewModels()
+    private val settingsViewModel: SettingsViewModel by activityViewModels { (activity as MainActivity).getSettingsViewModelFactory() }
     private val listFolderViewModel: ListFolderViewModel by activityViewModels()
 
     private val getAuthorization =
@@ -30,7 +30,7 @@ class SettingsFragment : Fragment() {
             Log.d("bg-login", "Received result from login activity")
             it.data?.let { resultIntent ->
                 val authorization = AuthorizationActivity.getResult(resultIntent)
-                context?.let { ctx -> settingsViewModel.saveAuthorization(ctx, authorization) }
+                settingsViewModel.saveAuthorization(authorization)
             }
         }
 
