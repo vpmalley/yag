@@ -13,6 +13,7 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import fr.vpm.yag.databinding.ActivityMainBinding
+import fr.vpm.yag.ui.settings.ListFolderViewModel
 import fr.vpm.yag.ui.settings.SettingsViewModel
 
 class MainActivity : AppCompatActivity() {
@@ -22,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private val Context.yagDataStore: DataStore<Preferences> by preferencesDataStore(name = "yagsettings")
 
     fun getSettingsViewModelFactory() = SettingsViewModel.Factory(yagDataStore)
+    fun getListFolderViewModelFactory() = ListFolderViewModel.Factory(yagDataStore)
 
     private val settingsViewModel: SettingsViewModel by viewModels { getSettingsViewModelFactory() }
 

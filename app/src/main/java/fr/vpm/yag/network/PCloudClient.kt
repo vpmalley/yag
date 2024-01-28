@@ -4,12 +4,12 @@ import android.content.Context
 import com.pcloud.sdk.ApiClient
 import com.pcloud.sdk.Authenticators
 import com.pcloud.sdk.PCloudSdk
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
 
-/**
- * To be scoped to an activity
- */
-class PCloudClient {
+class PCloudClient(private val pCloudRepository: SettingsRepository) {
 
 
     suspend fun getPCloudClient(): ApiClient? {
@@ -29,6 +29,18 @@ class PCloudClient {
             }
         }
     }
+
+    suspend fun getPCloudClientAsFlow(): Flow<ApiClient> {
+        return pCloudRepository.getOAuthTokenFlow()
+            .combine(pCloudRepository.getApiHostFlow()) { oAuthToken: String, apiHost: String ->
+                val authenticator = Authenticators.newOAuthAuthenticator(oAuthToken)
+                val latestApiClient = PCloudSdk.newClientBuilder().apiHost(apiHost)
+                    .authenticator(authenticator).create()
+                apiClient = latestApiClient
+                latestApiClient
+            }
+    }
+
 
     companion object {
         private var apiClient: ApiClient? = null
