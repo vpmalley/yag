@@ -5,13 +5,16 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.pcloud.sdk.RemoteFolder
 import fr.vpm.yag.network.PCloudClient
 import fr.vpm.yag.network.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
@@ -22,28 +25,18 @@ class ListFolderViewModel(private val pClient: PCloudClient?) : ViewModel() {
 
     private var remoteFolderFlow: Flow<RemoteFolder?> = emptyFlow()
 
-    fun getRemoteFolderFlow() = remoteFolderFlow
+    fun getRemoteFolder() = remoteFolderFlow.asLiveData()
 
-    fun fetchListFolder() {
-        viewModelScope.launch(Dispatchers.IO) {
+    fun fetchFolderContentRecursively() {
+        viewModelScope.launch {
             val currentClient = pClient ?: return@launch
             remoteFolderFlow = currentClient.getPCloudClientAsFlow().map { apiClient ->
                 val call = apiClient.listFolder(RemoteFolder.ROOT_FOLDER_ID.toLong())
-                val remoteFolder = try {
-                    val result = call.execute()
-                    Log.d(
-                        "bg-api",
-                        "Received a remote folder response ${result.folderId()} with children ${
-                            result.children().joinToString { it.name() }
-                        }"
-                    )
-                    result
-                } catch (t: Throwable) {
-                    Log.d("bg-api", "Received an exception $t")
-                    null
-                }
-                remoteFolder
-            }
+                call.execute()
+            }.catch { t: Throwable ->
+                Log.d("bg-api", "Received exception $t")
+                // TODO emit something, a kind of error probably
+            }.flowOn(Dispatchers.IO)
         }
     }
 
