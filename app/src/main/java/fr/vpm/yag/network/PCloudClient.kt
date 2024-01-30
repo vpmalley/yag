@@ -1,6 +1,7 @@
 package fr.vpm.yag.network
 
 import android.content.Context
+import android.util.Log
 import com.pcloud.sdk.ApiClient
 import com.pcloud.sdk.Authenticators
 import com.pcloud.sdk.PCloudSdk
@@ -33,6 +34,7 @@ class PCloudClient(private val pCloudRepository: SettingsRepository) {
     suspend fun getPCloudClientAsFlow(): Flow<ApiClient> {
         return pCloudRepository.getOAuthTokenFlow()
             .combine(pCloudRepository.getApiHostFlow()) { oAuthToken: String, apiHost: String ->
+                Log.d("bg-data", "Got token (${oAuthToken.isNotBlank()}) host $apiHost")
                 val authenticator = Authenticators.newOAuthAuthenticator(oAuthToken)
                 val latestApiClient = PCloudSdk.newClientBuilder().apiHost(apiHost)
                     .authenticator(authenticator).create()

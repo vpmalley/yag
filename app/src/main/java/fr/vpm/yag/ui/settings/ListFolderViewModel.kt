@@ -25,9 +25,9 @@ class ListFolderViewModel(private val pClient: PCloudClient?) : ViewModel() {
 
     private var remoteFolderFlow: Flow<RemoteFolder?> = emptyFlow()
 
-    fun getRemoteFolder() = remoteFolderFlow.asLiveData()
+    fun getPCloudRootFolder() = remoteFolderFlow.asLiveData()
 
-    fun fetchFolderContentRecursively() {
+    fun fetchAllContentRecursively() {
         viewModelScope.launch {
             val currentClient = pClient ?: return@launch
             remoteFolderFlow = currentClient.getPCloudClientAsFlow().map { apiClient ->

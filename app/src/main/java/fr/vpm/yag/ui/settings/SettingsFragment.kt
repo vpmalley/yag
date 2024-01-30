@@ -23,7 +23,6 @@ class SettingsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val settingsViewModel: SettingsViewModel by activityViewModels { (activity as MainActivity).getSettingsViewModelFactory() }
-    private val listFolderViewModel: ListFolderViewModel by activityViewModels { (activity as MainActivity).getListFolderViewModelFactory() }
 
     private val getAuthorization =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
