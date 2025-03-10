@@ -10,44 +10,53 @@ import android.provider.MediaStore.MediaColumns
 import android.util.Log
 import fr.vpm.yag.device.model.Album
 import fr.vpm.yag.device.model.DevicePhoto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Date
 
 class DeviceAlbumsRetriever {
     suspend fun getLocalAlbums(activity: Activity): Collection<Album> {
-
-        val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-        } else {
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        return withContext(Dispatchers.IO) {
+            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+            } else {
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            }
+            activity.contentResolver.query(
+                collection,
+                arrayOf(
+                    MediaColumns._ID,
+                    MediaColumns.DISPLAY_NAME,
+                    MediaColumns.BUCKET_ID,
+                    MediaColumns.BUCKET_DISPLAY_NAME,
+                    MediaColumns.DATA,
+                    MediaColumns.TITLE,
+                    MediaColumns.DATE_ADDED,
+                    MediaColumns.SIZE,
+                    MediaColumns.MIME_TYPE
+                ),
+                "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?",
+                arrayOf(
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
+                    MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
+                ),
+                "${MediaColumns.DATE_ADDED} DESC"
+            )?.use { localAlbumsCursor ->
+                val albumsById = mapAlbums(localAlbumsCursor)
+                Log.d("bg-media", "Got ${albumsById.size} albums")
+                return@withContext albumsById.values
+            }
+            return@withContext emptyList()
         }
-        activity.contentResolver.query(
-            collection,
-            arrayOf(
-                MediaStore.Images.Media._ID,
-                MediaStore.Images.Media.DISPLAY_NAME,
-                MediaStore.Images.Media.BUCKET_ID,
-                MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
-                MediaStore.Images.Media.DATA,
-                MediaStore.Images.Media.TITLE,
-                MediaStore.Images.Media.DATE_ADDED
-            ),
-            null,
-            null,
-            null
-        )?.use { localAlbumsCursor ->
-            val albumsById = mapAlbums(localAlbumsCursor)
-            Log.d("bg-media", "Got ${albumsById.size} albums")
-            return albumsById.values
-        }
-        return emptyList()
     }
 
     private fun mapAlbums(localImageCursor: Cursor): Map<String, Album> {
         val albumsById: MutableMap<String, Album> = HashMap<String, Album>()
         var currentAlbum: Album? = null
-        if (localImageCursor.moveToFirst()) {
+        if (localImageCursor.moveToFirst()) { // possibly optional
             while (localImageCursor.moveToNext()) {
-                val bucketIdColumnIndex = localImageCursor.getColumnIndex(MediaColumns.BUCKET_ID)
+                val bucketIdColumnIndex =
+                    localImageCursor.getColumnIndex(MediaColumns.BUCKET_ID)
                 val bucketId = localImageCursor.getString(bucketIdColumnIndex)
                 val bucketNameColumnIndex =
                     localImageCursor.getColumnIndex(MediaColumns.BUCKET_DISPLAY_NAME)
@@ -74,6 +83,11 @@ class DeviceAlbumsRetriever {
                         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                         photoId
                     )
+                    val mimeTypeColumn =
+                        localImageCursor.getColumnIndexOrThrow(MediaColumns.MIME_TYPE)
+                    val mimeType = localImageCursor.getString(mimeTypeColumn)
+                    val sizeColumn = localImageCursor.getColumnIndex(MediaColumns.SIZE)
+                    val size = localImageCursor.getLong(sizeColumn)
                     val devicePhoto =
                         DevicePhoto(
                             photoId,
