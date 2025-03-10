@@ -64,37 +64,36 @@ class DeviceAlbumsRetriever {
                     currentAlbum =
                         Album(bucketId, bucketName, null, mutableListOf(), Album.SOURCE_DEVICE)
                     albumsById[bucketId] = currentAlbum
-                    Log.d("bg-media", "Got a result for images")
-                    // extract first image
-                    val idColumnIndex = localImageCursor.getColumnIndex(BaseColumns._ID)
-                    val photoId = localImageCursor.getLong(idColumnIndex)
-                    val fileNameColumnIndex = localImageCursor.getColumnIndex(MediaColumns.DATA)
-                    val fileName = localImageCursor.getString(fileNameColumnIndex)
-                    val displayNameColumnIndex =
-                        localImageCursor.getColumnIndex(MediaColumns.DISPLAY_NAME)
-                    val displayName = localImageCursor.getString(displayNameColumnIndex)
-                    val dateAddedColumnIndex =
-                        localImageCursor.getColumnIndex(MediaColumns.DATE_ADDED)
-                    val dateAdded = localImageCursor.getString(dateAddedColumnIndex)
-                    val photoUri = ContentUris.withAppendedId(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        photoId
-                    )
-                    val mimeTypeColumn =
-                        localImageCursor.getColumnIndexOrThrow(MediaColumns.MIME_TYPE)
-                    val mimeType = localImageCursor.getString(mimeTypeColumn)
-                    val sizeColumn = localImageCursor.getColumnIndex(MediaColumns.SIZE)
-                    val size = localImageCursor.getLong(sizeColumn)
-                    val devicePhoto =
-                        DevicePhoto(
-                            photoId,
-                            photoUri,
-                            fileName,
-                            displayName,
-                            Date(dateAdded.toLong())
-                        )
-                    albumsById[bucketId]?.addPhoto(devicePhoto)
                 }
+                Log.d("bg-media", "Got a result for images")
+                val idColumnIndex = localImageCursor.getColumnIndex(BaseColumns._ID)
+                val photoId = localImageCursor.getLong(idColumnIndex)
+                val fileNameColumnIndex = localImageCursor.getColumnIndex(MediaColumns.DATA)
+                val fileName = localImageCursor.getString(fileNameColumnIndex)
+                val displayNameColumnIndex =
+                    localImageCursor.getColumnIndex(MediaColumns.DISPLAY_NAME)
+                val displayName = localImageCursor.getString(displayNameColumnIndex)
+                val dateAddedColumnIndex =
+                    localImageCursor.getColumnIndex(MediaColumns.DATE_ADDED)
+                val dateAdded = localImageCursor.getString(dateAddedColumnIndex)
+                val photoUri = ContentUris.withAppendedId(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    photoId
+                )
+                val mimeTypeColumn =
+                    localImageCursor.getColumnIndexOrThrow(MediaColumns.MIME_TYPE)
+                val mimeType = localImageCursor.getString(mimeTypeColumn)
+                val sizeColumn = localImageCursor.getColumnIndex(MediaColumns.SIZE)
+                val size = localImageCursor.getLong(sizeColumn)
+                val devicePhoto =
+                    DevicePhoto(
+                        photoId,
+                        photoUri,
+                        fileName,
+                        displayName,
+                        Date(dateAdded.toLong())
+                    )
+                albumsById[bucketId]?.addPhoto(devicePhoto)
             }
         }
         return albumsById
