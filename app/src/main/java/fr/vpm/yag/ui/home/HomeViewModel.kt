@@ -16,6 +16,9 @@ class HomeViewModel : ViewModel() {
     }
     val text: LiveData<String> = _text
 
+    private val _albums = MutableLiveData<Collection<Album>>()
+    val albumsToDisplay: LiveData<Collection<Album>> = _albums
+
     private val deviceAlbumsRetriever = DeviceAlbumsRetriever()
 
     private val albums = MutableLiveData<Collection<Album>>()
@@ -37,7 +40,12 @@ class HomeViewModel : ViewModel() {
             val localAlbums = deviceAlbumsRetriever.getLocalAlbums(activity)
             albums.postValue(localAlbums)
             displayAlbumsCount(localAlbums)
+            displayAlbums(localAlbums)
         }
+    }
+
+    private fun displayAlbums(localAlbums: Collection<Album>) {
+        _albums.value = localAlbums
     }
 
     private fun displayAlbumsCount(mediaAlbums: Collection<Album>) {
