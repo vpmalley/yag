@@ -35,11 +35,8 @@ class DeviceAlbumsRetriever {
                     MediaColumns.SIZE,
                     MediaColumns.MIME_TYPE
                 ),
-                "${MediaStore.Files.FileColumns.MEDIA_TYPE} = ? OR ${MediaStore.Files.FileColumns.MEDIA_TYPE} = ?",
-                arrayOf(
-                    MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
-                    MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString()
-                ),
+                null,
+                null,
                 "${MediaColumns.DATE_ADDED} DESC"
             )?.use { localAlbumsCursor ->
                 val albumsById = mapAlbums(localAlbumsCursor)

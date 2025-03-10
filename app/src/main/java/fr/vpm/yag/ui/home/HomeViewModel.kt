@@ -24,8 +24,7 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             val cachedAlbums = albums.value
             if (cachedAlbums != null) {
-                _text.value =
-                    "This device has ${cachedAlbums.size} albums with ${cachedAlbums.sumOf { it.photos.size }} photos"
+                displayAlbumsCount(cachedAlbums)
             } else {
                 fetchDeviceAlbums(activity)
             }
@@ -37,8 +36,12 @@ class HomeViewModel : ViewModel() {
             _text.value = "Scanning device for photos..."
             val localAlbums = deviceAlbumsRetriever.getLocalAlbums(activity)
             albums.postValue(localAlbums)
-            _text.value =
-                "This device has ${localAlbums.size} albums with ${localAlbums.sumOf { it.photos.size }} photos"
+            displayAlbumsCount(localAlbums)
         }
+    }
+
+    private fun displayAlbumsCount(mediaAlbums: Collection<Album>) {
+        _text.value =
+            "This device has ${mediaAlbums.size} albums with ${mediaAlbums.sumOf { it.photos.size }} photos"
     }
 }
