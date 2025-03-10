@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.google.android.material.snackbar.Snackbar
 import fr.vpm.yag.databinding.FragmentHomeBinding
+import fr.vpm.yag.device.model.DevicePhoto
 
 class HomeFragment : Fragment() {
 
@@ -29,6 +30,22 @@ class HomeFragment : Fragment() {
         homeViewModel.text.observe(viewLifecycleOwner) {
             _binding?.textHome?.text = it
         }
+        homeViewModel.albumsToDisplay.observe(viewLifecycleOwner) {
+
+            val photoItemViewIds = mutableListOf<Int>()
+            for (album in it) {
+                (album.photos.firstOrNull() as? DevicePhoto)?.uri?.let { albumCoverUri ->
+                    val photoItemView = AlbumItemView(requireContext())
+                    photoItemView.id = View.generateViewId()
+                    photoItemView.setPhotoUri(albumCoverUri)
+                    _binding?.photoFlow?.addView(photoItemView)
+                    photoItemViewIds.add(photoItemView.id)
+                }
+            }
+
+            _binding?.photoFlow?.referencedIds = photoItemViewIds.toIntArray()
+            _binding?.photoFlow?.setMaxElementsWrap(3)
+        }
         return _binding?.root
     }
 
@@ -37,28 +54,12 @@ class HomeFragment : Fragment() {
         requestMediaPermissions(onMediaPermissionsGranted, onMediaPermissionsDenied)
     }
 
-    val onMediaPermissionsGranted = {
-        homeViewModel.loadAlbums(requireActivity())
-    }
-
-    val onMediaPermissionsDenied = {
-        val snackbar = Snackbar.make(
-            requireView(),
-            "These permissions are required to access the media library",
-            Snackbar.LENGTH_LONG
-        )
-        snackbar.setAction("Ask") {
-            requestMediaPermissions(onMediaPermissionsGranted) {}
-        }
-        snackbar.show()
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
 
-    fun requestMediaPermissions(onGranted: () -> Unit, onDenied: () -> Unit) {
+    private fun requestMediaPermissions(onGranted: () -> Unit, onDenied: () -> Unit) {
         val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             arrayOf(
                 Manifest.permission.READ_MEDIA_IMAGES,
@@ -91,5 +92,21 @@ class HomeFragment : Fragment() {
         } else {
             requestPermissionLauncher.launch(permissionsToRequest)
         }
+    }
+
+    private val onMediaPermissionsGranted = {
+        homeViewModel.loadAlbums(requireActivity())
+    }
+
+    private val onMediaPermissionsDenied = {
+        val snackbar = Snackbar.make(
+            requireView(),
+            "These permissions are required to access the media library",
+            Snackbar.LENGTH_LONG
+        )
+        snackbar.setAction("Ask") {
+            requestMediaPermissions(onMediaPermissionsGranted) {}
+        }
+        snackbar.show()
     }
 }
