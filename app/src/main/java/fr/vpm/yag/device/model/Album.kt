@@ -4,11 +4,11 @@ class Album(
     var id: String? = null,
     var name: String? = null,
     var details: String? = null,
-    var photos: MutableList<Photo> = mutableListOf(),
+    var media: MutableList<Photo> = mutableListOf(),
     var source: String? = null
 ) {
-    fun addPhoto(devicePhoto: DevicePhoto) {
-        photos.add(devicePhoto)
+    fun addMedia(deviceMedia: DeviceMedia) {
+        media.add(deviceMedia)
     }
 
     companion object {
