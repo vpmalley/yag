@@ -1,6 +1,6 @@
 package fr.vpm.yag.device
 
-import android.app.Activity
+import android.content.Context
 import android.content.ContentUris
 import android.database.Cursor
 import android.os.Build
@@ -10,17 +10,19 @@ import android.provider.MediaStore.MediaColumns
 import android.util.Log
 import fr.vpm.yag.device.model.Album
 import fr.vpm.yag.device.model.DevicePhoto
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.Date
 
 class DeviceAlbumsRetriever {
-    suspend fun getLocalAlbums(activity: Activity): Collection<Album> {
+    suspend fun getLocalAlbums(context: Context): Collection<Album> = withContext(Dispatchers.IO) {
 
         val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
         } else {
             MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         }
-        activity.contentResolver.query(
+        context.contentResolver.query(
             collection,
             arrayOf(
                 MediaStore.Images.Media._ID,
@@ -37,9 +39,9 @@ class DeviceAlbumsRetriever {
         )?.use { localAlbumsCursor ->
             val albumsById = mapAlbums(localAlbumsCursor)
             Log.d("bg-media", "Got ${albumsById.size} albums")
-            return albumsById.values
+            return@withContext albumsById.values
         }
-        return emptyList()
+        emptyList<Album>()
     }
 
     private fun mapAlbums(localImageCursor: Cursor): Map<String, Album> {
