@@ -23,12 +23,22 @@ class HomeFragment : Fragment() {
         homeViewModel.text.observe(viewLifecycleOwner) {
             _binding?.textHome?.text = it
         }
+
+        homeViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            _binding?.loadingIndicator?.visibility = if (isLoading) View.VISIBLE else View.GONE
+            _binding?.buttonFetchMedia?.isEnabled = !isLoading
+        }
+
+        _binding?.buttonFetchMedia?.setOnClickListener {
+            homeViewModel.fetchDeviceAlbums(requireContext().applicationContext)
+        }
+
         return _binding?.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        homeViewModel.loadAlbums(requireActivity())
+        homeViewModel.loadAlbums(requireContext().applicationContext)
     }
 
     override fun onDestroyView() {
