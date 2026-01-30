@@ -1,105 +1,103 @@
 package fr.vpm.yag.device
 
-import android.app.Activity
 import android.content.ContentUris
-import android.database.Cursor
+import android.content.Context
 import android.os.Build
-import android.provider.BaseColumns
 import android.provider.MediaStore
-import android.provider.MediaStore.MediaColumns
 import android.util.Log
 import fr.vpm.yag.device.model.Album
-import fr.vpm.yag.device.model.DevicePhoto
+import fr.vpm.yag.device.model.DeviceMedia
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import java.util.Date
 
 class DeviceAlbumsRetriever {
-    suspend fun getLocalAlbums(activity: Activity): Collection<Album> {
-        return withContext(Dispatchers.IO) {
-            val collection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-            } else {
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-            }
-            activity.contentResolver.query(
-                collection,
-                arrayOf(
-                    MediaColumns._ID,
-                    MediaColumns.DISPLAY_NAME,
-                    MediaColumns.BUCKET_ID,
-                    MediaColumns.BUCKET_DISPLAY_NAME,
-                    MediaColumns.DATA,
-                    MediaColumns.TITLE,
-                    MediaColumns.DATE_ADDED,
-                    MediaColumns.SIZE,
-                    MediaColumns.MIME_TYPE
-                ),
-                null,
-                null,
-                "${MediaColumns.DATE_ADDED} DESC"
-            )?.use { localAlbumsCursor ->
-                val albumsById = mapAlbums(localAlbumsCursor)
-                Log.d("bg-media", "Got ${albumsById.size} albums")
-                return@withContext albumsById.values
-            }
-            return@withContext emptyList()
+    suspend fun getLocalAlbums(context: Context): Collection<Album> = coroutineScope {
+        val imageCollection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
         }
+        val videoCollection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        }
+
+        val imagesDeferred = async { queryMedia(context, imageCollection) }
+        val videosDeferred = async { queryMedia(context, videoCollection) }
+
+        val images = imagesDeferred.await()
+        val videos = videosDeferred.await()
+
+        val allMedia = images + videos
+        val albumsById = groupMediaIntoAlbums(allMedia)
+
+        Log.d("bg-media", "Got ${albumsById.size} albums")
+        albumsById.values
     }
 
-    private fun mapAlbums(localImageCursor: Cursor): Map<String, Album> {
-        val albumsById: MutableMap<String, Album> = HashMap<String, Album>()
-        var currentAlbum: Album? = null
-        if (localImageCursor.moveToFirst()) { // possibly optional
-            while (localImageCursor.moveToNext()) {
-                val bucketIdColumnIndex =
-                    localImageCursor.getColumnIndex(MediaColumns.BUCKET_ID)
-                val bucketId = localImageCursor.getString(bucketIdColumnIndex)
-                val bucketNameColumnIndex =
-                    localImageCursor.getColumnIndex(MediaColumns.BUCKET_DISPLAY_NAME)
-                val bucketName =
-                    localImageCursor.getString(bucketNameColumnIndex)
-                Log.d("bg-media", "Got image of bucket $bucketName")
-                if (currentAlbum == null || !albumsById.containsKey(bucketId)) {
-                    currentAlbum =
-                        Album(bucketId, bucketName, null, mutableListOf(), Album.SOURCE_DEVICE)
-                    albumsById[bucketId] = currentAlbum
-                }
-                Log.d("bg-media", "Got a result for images")
-                val idColumnIndex = localImageCursor.getColumnIndex(BaseColumns._ID)
-                val photoId = localImageCursor.getLong(idColumnIndex)
-                val fileNameColumnIndex = localImageCursor.getColumnIndex(MediaColumns.DATA)
-                val fileName = localImageCursor.getString(fileNameColumnIndex)
-                val displayNameColumnIndex =
-                    localImageCursor.getColumnIndex(MediaColumns.DISPLAY_NAME)
-                val displayName = localImageCursor.getString(displayNameColumnIndex)
-                val dateAddedColumnIndex =
-                    localImageCursor.getColumnIndex(MediaColumns.DATE_ADDED)
-                val dateAdded = localImageCursor.getString(dateAddedColumnIndex)
-                val photoUri = ContentUris.withAppendedId(
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    photoId
-                )
-                val mimeTypeColumn =
-                    localImageCursor.getColumnIndexOrThrow(MediaColumns.MIME_TYPE)
-                val mimeType = localImageCursor.getString(mimeTypeColumn)
-                val sizeColumn = localImageCursor.getColumnIndex(MediaColumns.SIZE)
-                val size = localImageCursor.getLong(sizeColumn)
-                val devicePhoto =
-                    DevicePhoto(
-                        photoId,
-                        photoUri,
-                        fileName,
+    private suspend fun queryMedia(context: Context, collection: android.net.Uri): List<DeviceMedia> = withContext(Dispatchers.IO) {
+        val mediaList = mutableListOf<DeviceMedia>()
+        val projection = arrayOf(
+            MediaStore.MediaColumns._ID,
+            MediaStore.MediaColumns.DISPLAY_NAME,
+            MediaStore.MediaColumns.BUCKET_ID,
+            MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
+            MediaStore.MediaColumns.DATA,
+            MediaStore.MediaColumns.DATE_ADDED
+        )
+
+        context.contentResolver.query(
+            collection,
+            projection,
+            null,
+            null,
+            "${MediaStore.MediaColumns.DATE_ADDED} DESC"
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val displayNameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+            val bucketIdColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_ID)
+            val bucketNameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
+            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
+            val dateAddedColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
+
+            while (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                val displayName = cursor.getString(displayNameColumn)
+                val bucketId = cursor.getString(bucketIdColumn)
+                val bucketName = cursor.getString(bucketNameColumn)
+                val data = cursor.getString(dataColumn)
+                val dateAdded = cursor.getLong(dateAddedColumn)
+                val contentUri = ContentUris.withAppendedId(collection, id)
+
+                mediaList.add(
+                    DeviceMedia(
+                        id,
+                        contentUri,
+                        data,
                         displayName,
-                        Date(dateAdded.toLong())
+                        Date(dateAdded * 1000),
+                        bucketId,
+                        bucketName
                     )
-                albumsById[bucketId]?.addPhoto(devicePhoto)
+                )
             }
+        }
+        mediaList
+    }
+
+    private fun groupMediaIntoAlbums(mediaList: List<DeviceMedia>): Map<String, Album> {
+        val albumsById = mutableMapOf<String, Album>()
+        for (media in mediaList) {
+            val bucketId = media.bucketId ?: "unknown"
+            val album = albumsById.getOrPut(bucketId) {
+                Album(bucketId, media.bucketName ?: "Unknown", null, mutableListOf(), Album.SOURCE_DEVICE)
+            }
+            album.addMedia(media)
         }
         return albumsById
-    }
-
-    interface OnAlbumsRetrievedListener {
-        fun onAlbumsRetrieved(albums: Collection<Album>)
     }
 }

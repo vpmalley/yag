@@ -1,6 +1,6 @@
 package fr.vpm.yag.ui.home
 
-import android.app.Activity
+import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -23,21 +23,22 @@ class HomeViewModel : ViewModel() {
 
     private val albums = MutableLiveData<Collection<Album>>()
 
-    fun loadAlbums(activity: Activity) {
+    fun loadAlbums(context: Context) {
         viewModelScope.launch {
             val cachedAlbums = albums.value
             if (cachedAlbums != null) {
                 displayAlbumsCount(cachedAlbums)
+                displayAlbums(cachedAlbums)
             } else {
-                fetchDeviceAlbums(activity)
+                fetchDeviceAlbums(context)
             }
         }
     }
 
-    fun fetchDeviceAlbums(activity: Activity) {
+    fun fetchDeviceAlbums(context: Context) {
         viewModelScope.launch {
-            _text.value = "Scanning device for photos..."
-            val localAlbums = deviceAlbumsRetriever.getLocalAlbums(activity)
+            _text.value = "Scanning device for media..."
+            val localAlbums = deviceAlbumsRetriever.getLocalAlbums(context)
             albums.postValue(localAlbums)
             displayAlbumsCount(localAlbums)
             displayAlbums(localAlbums)
@@ -50,6 +51,6 @@ class HomeViewModel : ViewModel() {
 
     private fun displayAlbumsCount(mediaAlbums: Collection<Album>) {
         _text.value =
-            "This device has ${mediaAlbums.size} albums with ${mediaAlbums.sumOf { it.photos.size }} photos"
+            "This device has ${mediaAlbums.size} albums with ${mediaAlbums.sumOf { it.media.size }} items"
     }
 }
