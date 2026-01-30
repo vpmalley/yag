@@ -16,6 +16,9 @@ class HomeViewModel : ViewModel() {
     }
     val text: LiveData<String> = _text
 
+    private val _albums = MutableLiveData<Collection<Album>>()
+    val albumsToDisplay: LiveData<Collection<Album>> = _albums
+
     private val deviceAlbumsRetriever = DeviceAlbumsRetriever()
 
     private val albums = MutableLiveData<Collection<Album>>()
@@ -24,8 +27,8 @@ class HomeViewModel : ViewModel() {
         viewModelScope.launch {
             val cachedAlbums = albums.value
             if (cachedAlbums != null) {
-                _text.value =
-                    "This device has ${cachedAlbums.size} albums with ${cachedAlbums.sumOf { it.media.size }} items"
+                displayAlbumsCount(cachedAlbums)
+                displayAlbums(cachedAlbums)
             } else {
                 fetchDeviceAlbums(context)
             }
@@ -34,11 +37,20 @@ class HomeViewModel : ViewModel() {
 
     fun fetchDeviceAlbums(context: Context) {
         viewModelScope.launch {
-            _text.value = "Scanning device for photos..."
+            _text.value = "Scanning device for media..."
             val localAlbums = deviceAlbumsRetriever.getLocalAlbums(context)
             albums.postValue(localAlbums)
-            _text.value =
-                "This device has ${localAlbums.size} albums with ${localAlbums.sumOf { it.media.size }} items"
+            displayAlbumsCount(localAlbums)
+            displayAlbums(localAlbums)
         }
+    }
+
+    private fun displayAlbums(localAlbums: Collection<Album>) {
+        _albums.value = localAlbums
+    }
+
+    private fun displayAlbumsCount(mediaAlbums: Collection<Album>) {
+        _text.value =
+            "This device has ${mediaAlbums.size} albums with ${mediaAlbums.sumOf { it.media.size }} items"
     }
 }

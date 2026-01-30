@@ -2,11 +2,8 @@ package fr.vpm.yag.device
 
 import android.content.ContentUris
 import android.content.Context
-import android.database.Cursor
 import android.os.Build
-import android.provider.BaseColumns
 import android.provider.MediaStore
-import android.provider.MediaStore.MediaColumns
 import android.util.Log
 import fr.vpm.yag.device.model.Album
 import fr.vpm.yag.device.model.DeviceMedia
@@ -58,7 +55,7 @@ class DeviceAlbumsRetriever {
             projection,
             null,
             null,
-            null
+            "${MediaStore.MediaColumns.DATE_ADDED} DESC"
         )?.use { cursor ->
             val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
             val displayNameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
@@ -103,5 +100,4 @@ class DeviceAlbumsRetriever {
         }
         return albumsById
     }
-
 }
