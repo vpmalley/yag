@@ -22,7 +22,9 @@
     <androidx.constraintlayout.helper.widget.Flow
         android:id="@+id/photoFlow"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:background="@color/cardview_light_background"
+        android:orientation="vertical"
         app:flow_horizontalStyle="spread_inside"
         app:flow_maxElementsWrap="3"
         app:flow_verticalStyle="spread_inside"

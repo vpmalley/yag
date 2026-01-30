@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -34,16 +35,20 @@ class HomeFragment : Fragment() {
 
             val photoItemViewIds = mutableListOf<Int>()
             for (album in it) {
+                Log.d("ux-home", "For album ${album.name}")
                 (album.photos.firstOrNull() as? DevicePhoto)?.uri?.let { albumCoverUri ->
                     val photoItemView = AlbumItemView(requireContext())
                     photoItemView.id = View.generateViewId()
                     photoItemView.setPhotoUri(albumCoverUri)
+                    _binding?.root?.addView(photoItemView)
                     _binding?.photoFlow?.addView(photoItemView)
                     photoItemViewIds.add(photoItemView.id)
+                    Log.d("ux-home", "Found a photo to display ")
                 }
             }
 
             _binding?.photoFlow?.referencedIds = photoItemViewIds.toIntArray()
+            Log.d("ux-home", "Displaying ${photoItemViewIds.size} albums")
             _binding?.photoFlow?.setMaxElementsWrap(3)
         }
         return _binding?.root
