@@ -17,6 +17,13 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    suspend fun clearAuthorization() {
+        dataStore.edit { settings ->
+            settings.remove(stringPreferencesKey(KEY_OAUTH_TOKEN))
+            settings.remove(stringPreferencesKey(KEY_HOST))
+        }
+    }
+
     fun getOAuthTokenFlow(): Flow<String> {
         return dataStore.data.map { preferences ->
             preferences[stringPreferencesKey(KEY_OAUTH_TOKEN)] ?: ""

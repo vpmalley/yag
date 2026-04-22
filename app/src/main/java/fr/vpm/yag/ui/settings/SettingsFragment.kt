@@ -43,8 +43,16 @@ class SettingsFragment : Fragment() {
         val root: View = binding.root
 
         val textView: TextView = binding.textNotifications
-        settingsViewModel.text.observe(viewLifecycleOwner) {
-            textView.text = it
+        settingsViewModel.isAuthenticated.observe(viewLifecycleOwner) { isAuthenticated ->
+            if (isAuthenticated) {
+                textView.text = getString(fr.vpm.yag.R.string.pcloud_status_authenticated)
+                binding.pcloudLogin.visibility = View.GONE
+                binding.pcloudLogout.visibility = View.VISIBLE
+            } else {
+                textView.text = getString(fr.vpm.yag.R.string.pcloud_status_not_authenticated)
+                binding.pcloudLogin.visibility = View.VISIBLE
+                binding.pcloudLogout.visibility = View.GONE
+            }
         }
         return root
     }
@@ -60,7 +68,9 @@ class SettingsFragment : Fragment() {
             )
             Log.d("bg-login", "Created intent to launch with $getAuthorization")
             getAuthorization.launch(intent)
-
+        }
+        binding.pcloudLogout.setOnClickListener {
+            settingsViewModel.logout()
         }
     }
 

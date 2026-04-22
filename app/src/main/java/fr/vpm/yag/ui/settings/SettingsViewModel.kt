@@ -6,8 +6,10 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.pcloud.sdk.AuthorizationData
+import kotlinx.coroutines.flow.map
 import fr.vpm.yag.network.SettingsRepository
 import kotlinx.coroutines.launch
 
@@ -18,9 +20,19 @@ class SettingsViewModel(private val settingsRepository: SettingsRepository) : Vi
     }
     val text: LiveData<String> = _text
 
+    val isAuthenticated: LiveData<Boolean> = settingsRepository.getOAuthTokenFlow()
+        .map { it.isNotBlank() }
+        .asLiveData()
+
     fun saveAuthorization(authorizationResult: AuthorizationData) {
         viewModelScope.launch {
             settingsRepository.saveAuthorization(authorizationResult)
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            settingsRepository.clearAuthorization()
         }
     }
 
