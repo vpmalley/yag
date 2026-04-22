@@ -36,4 +36,23 @@
         app:iconPadding="8dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/text_notifications" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/pcloud_logout"
+        style="@style/Widget.Material3.Button.OutlinedButton.Icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:text="@string/pcloud_logout_action"
+        android:textAlignment="viewStart"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:visibility="gone"
+        app:icon="@drawable/ic_cloud_white_24"
+        app:iconPadding="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/text_notifications" />
 </androidx.constraintlayout.widget.ConstraintLayout>
