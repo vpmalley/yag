@@ -11,7 +11,7 @@ import fr.vpm.yag.databinding.FragmentHomeBinding
 class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
-    private val homeViewModel: HomeViewModel by activityViewModels()
+    private val deviceAlbumViewModel: DeviceAlbumViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -20,17 +20,17 @@ class HomeFragment : Fragment() {
     ): View? {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
 
-        homeViewModel.text.observe(viewLifecycleOwner) {
+        deviceAlbumViewModel.text.observe(viewLifecycleOwner) {
             _binding?.textHome?.text = it
         }
 
-        homeViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+        deviceAlbumViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             _binding?.loadingIndicator?.visibility = if (isLoading) View.VISIBLE else View.GONE
             _binding?.buttonFetchMedia?.isEnabled = !isLoading
         }
 
         _binding?.buttonFetchMedia?.setOnClickListener {
-            homeViewModel.fetchDeviceAlbums(requireContext().applicationContext)
+            deviceAlbumViewModel.fetchDeviceAlbums(requireContext().applicationContext)
         }
 
         return _binding?.root
@@ -38,7 +38,7 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        homeViewModel.loadAlbums(requireContext().applicationContext)
+        deviceAlbumViewModel.loadAlbums(requireContext().applicationContext)
     }
 
     override fun onDestroyView() {

@@ -9,7 +9,7 @@ import fr.vpm.yag.device.DeviceAlbumsRetriever
 import fr.vpm.yag.device.model.Album
 import kotlinx.coroutines.launch
 
-class HomeViewModel : ViewModel() {
+class DeviceAlbumViewModel : ViewModel() {
 
     private val _text = MutableLiveData<String>().apply {
         value = "This is home Fragment"
@@ -18,13 +18,14 @@ class HomeViewModel : ViewModel() {
 
     private val deviceAlbumsRetriever = DeviceAlbumsRetriever()
 
-    private val albums = MutableLiveData<Collection<Album>>()
+    private val _albums = MutableLiveData<Collection<Album>>()
+    val albums: LiveData<Collection<Album>> = _albums
 
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> = _isLoading
 
     fun loadAlbums(context: Context) {
-        val cachedAlbums = albums.value
+        val cachedAlbums = _albums.value
         if (cachedAlbums != null) {
             _text.value =
                 "This device has ${cachedAlbums.size} albums with ${cachedAlbums.sumOf { it.photos.size }} photos"
@@ -39,7 +40,7 @@ class HomeViewModel : ViewModel() {
             _text.value = "Scanning device for photos..."
             try {
                 val localAlbums = deviceAlbumsRetriever.getLocalAlbums(context)
-                albums.value = localAlbums
+                _albums.value = localAlbums
                 _text.value =
                     "This device has ${localAlbums.size} albums with ${localAlbums.sumOf { it.photos.size }} photos"
             } catch (e: Exception) {
