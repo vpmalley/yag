@@ -37,6 +37,7 @@ class DashboardFragment : Fragment() {
         
         setupRecyclerView()
         setupColumnCountSelector()
+        setupPinchToZoom()
         observeAlbums()
     }
 
@@ -55,11 +56,7 @@ class DashboardFragment : Fragment() {
                 override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
                     // Progress is 0-5, map to 1-6 columns
                     columnCount = progress + 1
-                    binding.recyclerViewAlbums.layoutManager = 
-                        GridLayoutManager(requireContext(), columnCount)
-                    binding.recyclerViewAlbums.addItemDecoration(
-                        GridSpacingItemDecoration(requireContext(), columnCount, 1)
-                    )
+                    updateGridLayout()
                     binding.columnCountText.text = "Columns: $columnCount"
                 }
                 override fun onStartTrackingTouch(seekBar: SeekBar) {}
@@ -69,6 +66,32 @@ class DashboardFragment : Fragment() {
         // Initialize
         binding.columnCountSeekBar.progress = 2 // Default to 3 columns
         binding.columnCountText.text = "Columns: $columnCount"
+    }
+
+    private fun setupPinchToZoom() {
+        val scaleGestureDetector = ColumnCountGestureListener.create(
+            context = requireContext(),
+            minColumns = 1,
+            maxColumns = 6,
+            initialColumns = columnCount,
+            onColumnCountChanged = { newColumns ->
+                columnCount = newColumns
+                updateGridLayout()
+                binding.columnCountText.text = "Columns: $columnCount"
+                binding.columnCountSeekBar.progress = columnCount - 1
+            }
+        )
+        
+        binding.recyclerViewAlbums.setOnTouchListener { _, event ->
+            scaleGestureDetector.onTouchEvent(event)
+            // Also allow RecyclerView to handle touch events for scrolling
+            false
+        }
+    }
+
+    private fun updateGridLayout() {
+        binding.recyclerViewAlbums.layoutManager = GridLayoutManager(requireContext(), columnCount)
+        binding.recyclerViewAlbums.addItemDecoration(GridSpacingItemDecoration(requireContext(), columnCount, 1))
     }
 
     private fun observeAlbums() {
