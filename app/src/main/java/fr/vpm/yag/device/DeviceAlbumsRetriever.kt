@@ -55,12 +55,11 @@ class DeviceAlbumsRetriever {
                     localImageCursor.getColumnIndex(MediaColumns.BUCKET_DISPLAY_NAME)
                 val bucketName =
                     localImageCursor.getString(bucketNameColumnIndex)
-                Log.d("bg-media", "Got image of bucket $bucketName")
                 if (currentAlbum == null || !albumsById.containsKey(bucketId)) {
                     currentAlbum =
                         Album(bucketId, bucketName, null, mutableListOf(), Album.SOURCE_DEVICE)
                     albumsById[bucketId] = currentAlbum
-                    Log.d("bg-media", "Got a result for images")
+                    Log.d("bg-media", "Created album: $bucketName")
                     // extract first image
                     val idColumnIndex = localImageCursor.getColumnIndex(BaseColumns._ID)
                     val photoId = localImageCursor.getLong(idColumnIndex)

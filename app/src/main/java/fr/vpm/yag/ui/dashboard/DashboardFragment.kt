@@ -1,6 +1,7 @@
 package fr.vpm.yag.ui.dashboard
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,7 +10,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
 import fr.vpm.yag.databinding.FragmentDashboardBinding
+import fr.vpm.yag.device.model.Album
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
 
 class DashboardFragment : Fragment() {
@@ -44,10 +47,18 @@ class DashboardFragment : Fragment() {
     private fun setupRecyclerView() {
         val recyclerView = binding.recyclerViewAlbums
         recyclerView.layoutManager = GridLayoutManager(requireContext(), columnCount)
-        recyclerView.adapter = AlbumGridAdapter()
+        recyclerView.adapter = AlbumGridAdapter(onAlbumClick = { album, view ->
+            showAlbumInfo(album, view)
+        })
         recyclerView.addItemDecoration(
             GridSpacingItemDecoration(requireContext(), columnCount, 1)
         )
+    }
+
+    private fun showAlbumInfo(album: Album, view: View) {
+        val photoCount = album.photos.size
+        Snackbar.make(view, "Album has $photoCount photos", Snackbar.LENGTH_SHORT).show()
+        Log.d("AlbumClick", "Album object: $album")
     }
 
     private fun setupColumnCountSelector() {

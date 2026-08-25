@@ -1,17 +1,22 @@
 package fr.vpm.yag.ui.dashboard
 
+import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.Priority
 import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.google.android.material.snackbar.Snackbar
 import fr.vpm.yag.R
 import fr.vpm.yag.databinding.ItemAlbumGridBinding
 import fr.vpm.yag.device.model.Album
 import fr.vpm.yag.device.model.DevicePhoto
 
-class AlbumGridAdapter : RecyclerView.Adapter<AlbumGridAdapter.AlbumViewHolder>() {
+class AlbumGridAdapter(
+    private val onAlbumClick: (Album, View) -> Unit = { _, _ -> }
+) : RecyclerView.Adapter<AlbumGridAdapter.AlbumViewHolder>() {
 
     private var albums: List<Album> = emptyList()
 
@@ -47,6 +52,11 @@ class AlbumGridAdapter : RecyclerView.Adapter<AlbumGridAdapter.AlbumViewHolder>(
             } else {
                 // No photos - set placeholder background
                 setPlaceholderBackground()
+            }
+            
+            // Set click listener for the album
+            binding.root.setOnClickListener {
+                onAlbumClick(album, binding.root)
             }
         }
         

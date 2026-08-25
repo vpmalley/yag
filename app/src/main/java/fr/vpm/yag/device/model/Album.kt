@@ -11,6 +11,10 @@ class Album(
         photos.add(devicePhoto)
     }
 
+    override fun toString(): String {
+        return "Album(id=$id, name=$name, details=$details, photos=$photos, source=$source)"
+    }
+
     companion object {
         internal const val SOURCE_DEVICE = "source_device"
         internal const val SOURCE_FLICKR = "source_flickr"
