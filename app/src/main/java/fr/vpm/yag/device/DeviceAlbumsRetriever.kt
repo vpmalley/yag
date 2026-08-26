@@ -46,7 +46,6 @@ class DeviceAlbumsRetriever {
 
     private fun mapAlbums(localImageCursor: Cursor): Map<String, Album> {
         val albumsById: MutableMap<String, Album> = HashMap<String, Album>()
-        var currentAlbum: Album? = null
         if (localImageCursor.moveToFirst()) {
             while (localImageCursor.moveToNext()) {
                 val bucketIdColumnIndex = localImageCursor.getColumnIndex(MediaColumns.BUCKET_ID)
@@ -55,36 +54,38 @@ class DeviceAlbumsRetriever {
                     localImageCursor.getColumnIndex(MediaColumns.BUCKET_DISPLAY_NAME)
                 val bucketName =
                     localImageCursor.getString(bucketNameColumnIndex)
-                if (currentAlbum == null || !albumsById.containsKey(bucketId)) {
-                    currentAlbum =
+                
+                // Create album if it doesn't exist
+                if (!albumsById.containsKey(bucketId)) {
+                    albumsById[bucketId] = 
                         Album(bucketId, bucketName, null, mutableListOf(), Album.SOURCE_DEVICE)
-                    albumsById[bucketId] = currentAlbum
                     Log.d("bg-media", "Created album: $bucketName")
-                    // extract first image
-                    val idColumnIndex = localImageCursor.getColumnIndex(BaseColumns._ID)
-                    val photoId = localImageCursor.getLong(idColumnIndex)
-                    val fileNameColumnIndex = localImageCursor.getColumnIndex(MediaColumns.DATA)
-                    val fileName = localImageCursor.getString(fileNameColumnIndex)
-                    val displayNameColumnIndex =
-                        localImageCursor.getColumnIndex(MediaColumns.DISPLAY_NAME)
-                    val displayName = localImageCursor.getString(displayNameColumnIndex)
-                    val dateAddedColumnIndex =
-                        localImageCursor.getColumnIndex(MediaColumns.DATE_ADDED)
-                    val dateAdded = localImageCursor.getString(dateAddedColumnIndex)
-                    val photoUri = ContentUris.withAppendedId(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        photoId
-                    )
-                    val devicePhoto =
-                        DevicePhoto(
-                            photoId,
-                            photoUri,
-                            fileName,
-                            displayName,
-                            Date(dateAdded.toLong())
-                        )
-                    albumsById[bucketId]?.addPhoto(devicePhoto)
                 }
+                
+                // Extract photo for EVERY row and add to album
+                val idColumnIndex = localImageCursor.getColumnIndex(BaseColumns._ID)
+                val photoId = localImageCursor.getLong(idColumnIndex)
+                val fileNameColumnIndex = localImageCursor.getColumnIndex(MediaColumns.DATA)
+                val fileName = localImageCursor.getString(fileNameColumnIndex)
+                val displayNameColumnIndex =
+                    localImageCursor.getColumnIndex(MediaColumns.DISPLAY_NAME)
+                val displayName = localImageCursor.getString(displayNameColumnIndex)
+                val dateAddedColumnIndex =
+                    localImageCursor.getColumnIndex(MediaColumns.DATE_ADDED)
+                val dateAdded = localImageCursor.getString(dateAddedColumnIndex)
+                val photoUri = ContentUris.withAppendedId(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    photoId
+                )
+                val devicePhoto =
+                    DevicePhoto(
+                        photoId,
+                        photoUri,
+                        fileName,
+                        displayName,
+                        Date(dateAdded.toLong())
+                    )
+                albumsById[bucketId]?.addPhoto(devicePhoto)
             }
         }
         return albumsById
