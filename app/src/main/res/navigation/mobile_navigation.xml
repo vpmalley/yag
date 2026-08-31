@@ -41,5 +41,21 @@
         <argument
             android:name="albumId"
             app:argType="string" />
+        <action
+            android:id="@+id/action_albumDetailFragment_to_photoViewerFragment"
+            app:destination="@id/photoViewerFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/photoViewerFragment"
+        android:name="fr.vpm.yag.ui.album.PhotoViewerFragment"
+        android:label="Photo Viewer"
+        tools:layout="@layout/fragment_photo_viewer">
+        <argument
+            android:name="albumId"
+            app:argType="string" />
+        <argument
+            android:name="photoPosition"
+            app:argType="integer" />
     </fragment>
 </navigation>
