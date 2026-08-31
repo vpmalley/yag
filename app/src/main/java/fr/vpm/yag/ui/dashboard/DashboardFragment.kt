@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.SeekBar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
@@ -47,18 +48,24 @@ class DashboardFragment : Fragment() {
     private fun setupRecyclerView() {
         val recyclerView = binding.recyclerViewAlbums
         recyclerView.layoutManager = GridLayoutManager(requireContext(), columnCount)
-        recyclerView.adapter = AlbumGridAdapter(onAlbumClick = { album, view ->
-            showAlbumInfo(album, view)
+        recyclerView.adapter = AlbumGridAdapter(onAlbumClick = { album, _ ->
+            navigateToAlbumDetail(album)
         })
         recyclerView.addItemDecoration(
             GridSpacingItemDecoration(requireContext(), columnCount, 1)
         )
     }
 
-    private fun showAlbumInfo(album: Album, view: View) {
+    private fun navigateToAlbumDetail(album: Album) {
         val photoCount = album.photos.size
-        Snackbar.make(view, "Album has $photoCount photos", Snackbar.LENGTH_SHORT).show()
+        Snackbar.make(binding.root, "Album has $photoCount photos", Snackbar.LENGTH_SHORT).show()
         Log.d("AlbumClick", "Album object: $album")
+        
+        val albumId = album.id
+        if (albumId != null) {
+            val action = DashboardFragmentDirections.actionNavigationDashboardToAlbumDetailFragment(albumId)
+            findNavController().navigate(action)
+        }
     }
 
     private fun setupColumnCountSelector() {

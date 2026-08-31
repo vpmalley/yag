@@ -15,7 +15,11 @@
         android:id="@+id/navigation_dashboard"
         android:name="fr.vpm.yag.ui.dashboard.DashboardFragment"
         android:label="@string/title_dashboard"
-        tools:layout="@layout/fragment_dashboard" />
+        tools:layout="@layout/fragment_dashboard">
+        <action
+            android:id="@+id/action_navigation_dashboard_to_albumDetailFragment"
+            app:destination="@id/albumDetailFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/navigation_notifications"
@@ -28,4 +32,14 @@
         android:name="fr.vpm.yag.ui.settings.SettingsFragment"
         android:label="@string/title_settings"
         tools:layout="@layout/fragment_settings" />
+
+    <fragment
+        android:id="@+id/albumDetailFragment"
+        android:name="fr.vpm.yag.ui.album.AlbumDetailFragment"
+        android:label="Album Detail"
+        tools:layout="@layout/fragment_album_detail">
+        <argument
+            android:name="albumId"
+            app:argType="string" />
+    </fragment>
 </navigation>
