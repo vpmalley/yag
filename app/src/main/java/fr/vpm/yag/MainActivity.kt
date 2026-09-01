@@ -2,6 +2,7 @@ package fr.vpm.yag
 
 import android.content.Context
 import android.os.Bundle
+import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.datastore.core.DataStore
@@ -9,7 +10,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import fr.vpm.yag.databinding.ActivityMainBinding
@@ -27,6 +27,14 @@ class MainActivity : AppCompatActivity() {
 
     private val settingsViewModel: SettingsViewModel by viewModels { getSettingsViewModelFactory() }
 
+    fun setToolbarVisibility(visible: Boolean) {
+        binding.toolbar.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
+    fun setNavBarVisibility(visible: Boolean) {
+        binding.navView.visibility = if (visible) View.VISIBLE else View.GONE
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -38,14 +46,16 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
         val navController = navHostFragment.navController
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
+        
+        // Set up Toolbar with Navigation Component
+        // Set up AppBarConfiguration with top-level destinations
+        // The up button will automatically navigate up the back stack for nested fragments
         val appBarConfiguration = AppBarConfiguration(
             setOf(
                 R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications
             )
         )
-        setupActionBarWithNavController(navController, appBarConfiguration)
+        binding.toolbar.setupWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
     }
 }

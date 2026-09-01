@@ -11,7 +11,9 @@ import fr.vpm.yag.databinding.ItemPhotoViewerBinding
 import fr.vpm.yag.device.model.DevicePhoto
 import fr.vpm.yag.device.model.Photo
 
-class PhotoViewerAdapter : RecyclerView.Adapter<PhotoViewerAdapter.PhotoViewHolder>() {
+class PhotoViewerAdapter(
+    private val onPhotoClick: () -> Unit = {}
+) : RecyclerView.Adapter<PhotoViewerAdapter.PhotoViewHolder>() {
 
     private var photos: List<Photo> = emptyList()
 
@@ -35,6 +37,11 @@ class PhotoViewerAdapter : RecyclerView.Adapter<PhotoViewerAdapter.PhotoViewHold
                 binding.fullPhoto.setBackgroundColor(
                     binding.root.context.getColor(android.R.color.black)
                 )
+            }
+            
+            // Set click listener for full screen
+            binding.fullPhoto.setOnClickListener {
+                onPhotoClick()
             }
         }
     }

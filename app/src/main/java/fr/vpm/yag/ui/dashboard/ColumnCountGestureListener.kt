@@ -28,11 +28,12 @@ class ColumnCountGestureListener(
         val scaleFactor = detector.scaleFactor
         
         // Invert scale: pinch out (zoom in) = decrease columns, pinch in (zoom out) = increase columns
-        if (scaleFactor > 1.05f) {
+        // Use smaller thresholds for more precise control (0.98/1.02 instead of 0.95/1.05)
+        if (scaleFactor > 1.02f) {
             // Zoom out gesture (pinch in) - increase columns
             currentColumns = min(currentColumns + 1, maxColumns)
             onColumnCountChanged(currentColumns)
-        } else if (scaleFactor < 0.95f) {
+        } else if (scaleFactor < 0.98f) {
             // Zoom in gesture (pinch out) - decrease columns
             currentColumns = max(currentColumns - 1, minColumns)
             onColumnCountChanged(currentColumns)

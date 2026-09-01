@@ -4,9 +4,12 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.navArgs
 import androidx.viewpager2.widget.ViewPager2
+import fr.vpm.yag.MainActivity
 import fr.vpm.yag.databinding.FragmentPhotoViewerBinding
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
 import androidx.fragment.app.activityViewModels
@@ -21,6 +24,9 @@ class PhotoViewerFragment : Fragment() {
 
     // Receive arguments
     private val args: PhotoViewerFragmentArgs by navArgs()
+
+    // Full screen mode flag
+    private var isFullScreen = false
 
     override fun onCreateView(
         inflater: LayoutInflater, 
@@ -43,6 +49,12 @@ class PhotoViewerFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Restore full screen state if needed
+        updateSystemUiVisibility(isFullScreen)
+    }
+
     private fun findAlbumById(albumId: String): fr.vpm.yag.device.model.Album? {
         return deviceAlbumViewModel.albums.value?.firstOrNull { it.id == albumId }
     }
@@ -50,8 +62,10 @@ class PhotoViewerFragment : Fragment() {
     private fun setupViewPager(album: fr.vpm.yag.device.model.Album, initialPosition: Int) {
         val viewPager = binding.viewPager
         
-        // Create adapter with album photos
-        val adapter = PhotoViewerAdapter().apply {
+        // Create adapter with album photos and click listener
+        val adapter = PhotoViewerAdapter(onPhotoClick = {
+            toggleFullScreen()
+        }).apply {
             submitList(album.photos)
         }
         viewPager.adapter = adapter
@@ -70,6 +84,32 @@ class PhotoViewerFragment : Fragment() {
         
         // Initialize scrollability for the first page
         updateViewPagerScrollability(viewPager, initialPosition, album.photos.size)
+    }
+
+    private fun toggleFullScreen() {
+        isFullScreen = !isFullScreen
+        updateSystemUiVisibility(isFullScreen)
+        
+        // Also hide/show the Toolbar and BottomNavigationView
+        val activity = requireActivity() as? MainActivity
+        activity?.let { mainActivity ->
+            mainActivity.setToolbarVisibility(!isFullScreen)
+            mainActivity.setNavBarVisibility(!isFullScreen)
+        }
+    }
+
+    private fun updateSystemUiVisibility(fullScreen: Boolean) {
+        val activity = requireActivity()
+        if (fullScreen) {
+            // Hide system UI
+            WindowInsetsControllerCompat(activity.window, binding.root).let { controller ->
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        } else {
+            // Show system UI
+            WindowInsetsControllerCompat(activity.window, binding.root).show(WindowInsetsCompat.Type.systemBars())
+        }
     }
 
     private fun updateViewPagerScrollability(viewPager: ViewPager2, currentPosition: Int, totalPhotos: Int) {

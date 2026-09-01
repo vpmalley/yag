@@ -49,7 +49,7 @@
     <fragment
         android:id="@+id/photoViewerFragment"
         android:name="fr.vpm.yag.ui.album.PhotoViewerFragment"
-        android:label="Photo Viewer"
+        android:label=""
         tools:layout="@layout/fragment_photo_viewer">
         <argument
             android:name="albumId"

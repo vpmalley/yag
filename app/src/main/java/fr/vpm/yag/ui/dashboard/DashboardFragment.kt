@@ -109,6 +109,10 @@ class DashboardFragment : Fragment() {
 
     private fun updateGridLayout() {
         binding.recyclerViewAlbums.layoutManager = GridLayoutManager(requireContext(), columnCount)
+        // Remove existing decorations before adding new one
+        while (binding.recyclerViewAlbums.itemDecorationCount > 0) {
+            binding.recyclerViewAlbums.removeItemDecorationAt(0)
+        }
         binding.recyclerViewAlbums.addItemDecoration(GridSpacingItemDecoration(requireContext(), columnCount, 1))
     }
 

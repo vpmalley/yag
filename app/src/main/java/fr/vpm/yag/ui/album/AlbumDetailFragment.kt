@@ -120,6 +120,10 @@ class AlbumDetailFragment : Fragment() {
 
     private fun updateGridLayout() {
         binding.recyclerViewPhotos.layoutManager = GridLayoutManager(requireContext(), columnCount)
+        // Remove existing decorations before adding new one
+        while (binding.recyclerViewPhotos.itemDecorationCount > 0) {
+            binding.recyclerViewPhotos.removeItemDecorationAt(0)
+        }
         binding.recyclerViewPhotos.addItemDecoration(GridSpacingItemDecoration(requireContext(), columnCount, 1))
     }
 
