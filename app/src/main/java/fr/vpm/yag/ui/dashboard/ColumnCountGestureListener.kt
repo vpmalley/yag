@@ -29,11 +29,11 @@ class ColumnCountGestureListener(
         
         // Invert scale: pinch out (zoom in) = decrease columns, pinch in (zoom out) = increase columns
         // Use smaller thresholds for more precise control (0.98/1.02 instead of 0.95/1.05)
-        if (scaleFactor > 1.02f) {
+        if (scaleFactor > 1.01f) {
             // Zoom out gesture (pinch in) - increase columns
             currentColumns = min(currentColumns + 1, maxColumns)
             onColumnCountChanged(currentColumns)
-        } else if (scaleFactor < 0.98f) {
+        } else if (scaleFactor < 0.99f) {
             // Zoom in gesture (pinch out) - decrease columns
             currentColumns = max(currentColumns - 1, minColumns)
             onColumnCountChanged(currentColumns)
