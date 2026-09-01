@@ -31,8 +31,8 @@ class AlbumDetailFragment : Fragment() {
     private val args: AlbumDetailFragmentArgs by navArgs()
 
     override fun onCreateView(
-        inflater: LayoutInflater, 
-        container: ViewGroup?, 
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentAlbumDetailBinding.inflate(inflater, container, false)
@@ -44,7 +44,7 @@ class AlbumDetailFragment : Fragment() {
 
         val albumId = args.albumId
         val album = findAlbumById(albumId)
-        
+
         if (album != null) {
             setupAlbumHeader(album)
             setupRecyclerView(album)
@@ -64,7 +64,7 @@ class AlbumDetailFragment : Fragment() {
     private fun setupRecyclerView(album: Album) {
         val recyclerView = binding.recyclerViewPhotos
         val albumId = album.id ?: return
-        
+
         recyclerView.layoutManager = GridLayoutManager(requireContext(), columnCount)
         recyclerView.adapter = PhotoGridAdapter(onPhotoClick = { position ->
             navigateToPhotoViewer(albumId, position)
@@ -93,10 +93,9 @@ class AlbumDetailFragment : Fragment() {
             onColumnCountChanged = { newColumns ->
                 columnCount = newColumns
                 updateGridLayout()
-                binding.columnCountText.text = "Columns: $columnCount"
             }
         )
-        
+
         binding.recyclerViewPhotos.setOnTouchListener { _, event ->
             scaleGestureDetector.onTouchEvent(event)
             // Also allow RecyclerView to handle touch events for scrolling
@@ -108,11 +107,11 @@ class AlbumDetailFragment : Fragment() {
         binding.filterButton.setOnClickListener {
             Toast.makeText(requireContext(), "Filter", Toast.LENGTH_SHORT).show()
         }
-        
+
         binding.shareButton.setOnClickListener {
             Toast.makeText(requireContext(), "Share", Toast.LENGTH_SHORT).show()
         }
-        
+
         binding.deleteButton.setOnClickListener {
             Toast.makeText(requireContext(), "Delete", Toast.LENGTH_SHORT).show()
         }
@@ -124,7 +123,13 @@ class AlbumDetailFragment : Fragment() {
         while (binding.recyclerViewPhotos.itemDecorationCount > 0) {
             binding.recyclerViewPhotos.removeItemDecorationAt(0)
         }
-        binding.recyclerViewPhotos.addItemDecoration(GridSpacingItemDecoration(requireContext(), columnCount, 1))
+        binding.recyclerViewPhotos.addItemDecoration(
+            GridSpacingItemDecoration(
+                requireContext(),
+                columnCount,
+                1
+            )
+        )
     }
 
     override fun onDestroyView() {
