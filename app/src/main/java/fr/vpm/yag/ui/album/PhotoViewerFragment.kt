@@ -72,18 +72,6 @@ class PhotoViewerFragment : Fragment() {
         
         // Set initial position
         viewPager.setCurrentItem(initialPosition, false)
-        
-        // Block swipe for first and last photo
-        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                super.onPageSelected(position)
-                // Update scrollability based on position
-                updateViewPagerScrollability(viewPager, position, album.photos.size)
-            }
-        })
-        
-        // Initialize scrollability for the first page
-        updateViewPagerScrollability(viewPager, initialPosition, album.photos.size)
     }
 
     private fun toggleFullScreen() {
@@ -110,14 +98,6 @@ class PhotoViewerFragment : Fragment() {
             // Show system UI
             WindowInsetsControllerCompat(activity.window, binding.root).show(WindowInsetsCompat.Type.systemBars())
         }
-    }
-
-    private fun updateViewPagerScrollability(viewPager: ViewPager2, currentPosition: Int, totalPhotos: Int) {
-        // Disable swipe if at first or last photo
-        val isFirstPhoto = currentPosition == 0
-        val isLastPhoto = currentPosition == totalPhotos - 1
-        
-        viewPager.isUserInputEnabled = !(isFirstPhoto || isLastPhoto)
     }
 
     override fun onDestroyView() {

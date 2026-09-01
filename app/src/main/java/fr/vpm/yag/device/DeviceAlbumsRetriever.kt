@@ -39,7 +39,8 @@ class DeviceAlbumsRetriever {
         )?.use { localAlbumsCursor ->
             val albumsById = mapAlbums(localAlbumsCursor)
             Log.d("bg-media", "Got ${albumsById.size} albums")
-            return@withContext albumsById.values
+            // Sort albums alphabetically by name
+            return@withContext albumsById.values.sortedBy { it.name?.lowercase() ?: "" }
         }
         emptyList<Album>()
     }
