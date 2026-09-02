@@ -8,5 +8,6 @@ class DevicePhoto(
     var uri: Uri? = null,
     var path: String? = null,
     var displayName: String? = null,
-    var additionDate: Date? = null
+    var additionDate: Date? = null,
+    var isFavorite: Boolean = false
 ) : Photo

@@ -1,6 +1,10 @@
 package fr.vpm.yag.ui.album
 
+import android.content.ContentValues
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -11,8 +15,12 @@ import androidx.navigation.fragment.navArgs
 import androidx.viewpager2.widget.ViewPager2
 import fr.vpm.yag.MainActivity
 import fr.vpm.yag.databinding.FragmentPhotoViewerBinding
+import fr.vpm.yag.device.model.DevicePhoto
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
 import androidx.fragment.app.activityViewModels
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class PhotoViewerFragment : Fragment() {
 
@@ -29,8 +37,8 @@ class PhotoViewerFragment : Fragment() {
     private var isFullScreen = false
 
     override fun onCreateView(
-        inflater: LayoutInflater, 
-        container: ViewGroup?, 
+        inflater: LayoutInflater,
+        container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentPhotoViewerBinding.inflate(inflater, container, false)
@@ -43,7 +51,7 @@ class PhotoViewerFragment : Fragment() {
         val albumId = args.albumId
         val initialPosition = args.photoPosition
         val album = findAlbumById(albumId)
-        
+
         if (album != null) {
             setupViewPager(album, initialPosition)
         }
@@ -61,23 +69,53 @@ class PhotoViewerFragment : Fragment() {
 
     private fun setupViewPager(album: fr.vpm.yag.device.model.Album, initialPosition: Int) {
         val viewPager = binding.viewPager
-        
-        // Create adapter with album photos and click listener
-        val adapter = PhotoViewerAdapter(onPhotoClick = {
-            toggleFullScreen()
-        }).apply {
+
+        // Create adapter with album photos and click listeners
+        val adapter = PhotoViewerAdapter(
+            onPhotoClick = {
+                toggleFullScreen()
+            },
+            onFavoriteClick = { devicePhoto, newFavoriteState ->
+                updateFavoriteInMediaStore(devicePhoto, newFavoriteState)
+            }
+        ).apply {
             submitList(album.photos)
         }
         viewPager.adapter = adapter
-        
+
         // Set initial position
         viewPager.setCurrentItem(initialPosition, false)
+    }
+
+    private fun updateFavoriteInMediaStore(devicePhoto: DevicePhoto, isFavorite: Boolean) {
+        Log.d("PhotoViewer", "Updating favorite for photo ${devicePhoto.id} to $isFavorite")
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val contentUri = devicePhoto.uri ?: return@launch
+
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.IS_FAVORITE, if (isFavorite) 1 else 0)
+                }
+
+                requireContext().contentResolver.update(
+                    contentUri,
+                    values,
+                    null,
+                    null
+                )
+
+                Log.d("PhotoViewer", "Successfully updated IS_FAVORITE for photo ${devicePhoto.id}")
+            } catch (e: Exception) {
+                Log.e("PhotoViewer", "Failed to update IS_FAVORITE for photo ${devicePhoto.id}", e)
+            }
+        }
     }
 
     private fun toggleFullScreen() {
         isFullScreen = !isFullScreen
         updateSystemUiVisibility(isFullScreen)
-        
+
         // Also hide/show the Toolbar and BottomNavigationView
         val activity = requireActivity() as? MainActivity
         activity?.let { mainActivity ->
@@ -92,11 +130,15 @@ class PhotoViewerFragment : Fragment() {
             // Hide system UI
             WindowInsetsControllerCompat(activity.window, binding.root).let { controller ->
                 controller.hide(WindowInsetsCompat.Type.systemBars())
-                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.systemBarsBehavior =
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         } else {
             // Show system UI
-            WindowInsetsControllerCompat(activity.window, binding.root).show(WindowInsetsCompat.Type.systemBars())
+            WindowInsetsControllerCompat(
+                activity.window,
+                binding.root
+            ).show(WindowInsetsCompat.Type.systemBars())
         }
     }
 

@@ -31,7 +31,8 @@ class DeviceAlbumsRetriever {
                 MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
                 MediaStore.Images.Media.DATA,
                 MediaStore.Images.Media.TITLE,
-                MediaStore.Images.Media.DATE_ADDED
+                MediaStore.Images.Media.DATE_ADDED,
+                MediaStore.Images.Media.IS_FAVORITE
             ),
             null,
             null,
@@ -74,6 +75,9 @@ class DeviceAlbumsRetriever {
                 val dateAddedColumnIndex =
                     localImageCursor.getColumnIndex(MediaColumns.DATE_ADDED)
                 val dateAdded = localImageCursor.getString(dateAddedColumnIndex)
+                val isFavoriteColumnIndex =
+                    localImageCursor.getColumnIndex(MediaStore.Images.Media.IS_FAVORITE)
+                val isFavorite = localImageCursor.getInt(isFavoriteColumnIndex) != 0
                 val photoUri = ContentUris.withAppendedId(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                     photoId
@@ -84,7 +88,8 @@ class DeviceAlbumsRetriever {
                         photoUri,
                         fileName,
                         displayName,
-                        Date(dateAdded.toLong())
+                        Date(dateAdded.toLong()),
+                        isFavorite
                     )
                 albumsById[bucketId]?.addPhoto(devicePhoto)
             }

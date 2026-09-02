@@ -13,4 +13,54 @@
         android:contentDescription="photo"
         android:scaleType="fitCenter" />
 
+    <!-- Bottom overlay with action buttons -->
+    <LinearLayout
+        android:id="@+id/bottomOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="#80000000"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <!-- Share button -->
+        <ImageButton
+            android:id="@+id/shareButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Share"
+            android:src="@drawable/ic_share" />
+
+        <!-- Spacer -->
+        <ImageButton
+            android:id="@+id/favoriteButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Favorite"
+            android:src="@drawable/ic_heart_outline" />
+
+        <!-- Favorite button -->
+        <ImageButton
+            android:id="@+id/deleteButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Delete"
+            android:src="@drawable/ic_delete" />
+
+        <!-- Spacer -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Delete button -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+    </LinearLayout>
+
 </FrameLayout>
