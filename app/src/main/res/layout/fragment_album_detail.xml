@@ -17,19 +17,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <TextView
-            android:id="@+id/albumName"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:layout_gravity="center_vertical"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
-            android:textColor="?attr/colorOnSurface"
-            tools:text="Album Name" />
-
         <ImageButton
             android:id="@+id/filterButton"
             android:layout_width="48dp"
@@ -38,7 +25,7 @@
             android:contentDescription="Filter"
             android:gravity="center_vertical"
             android:padding="8dp"
-            android:src="@drawable/ic_filter"
+            android:src="@drawable/ic_filter_white_24"
             app:tint="?attr/colorOnSurface" />
 
         <ImageButton
@@ -49,7 +36,7 @@
             android:contentDescription="Share"
             android:gravity="center_vertical"
             android:padding="8dp"
-            android:src="@drawable/ic_share"
+            android:src="@drawable/ic_share_white_24"
             app:tint="?attr/colorOnSurface" />
 
         <ImageButton
@@ -62,6 +49,19 @@
             android:padding="8dp"
             android:src="@drawable/ic_delete"
             app:tint="?attr/colorOnSurface" />
+
+        <TextView
+            android:id="@+id/albumName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
+            android:textColor="?attr/colorOnSurface"
+            tools:text="Album Name" />
     </LinearLayout>
 
     <!-- Photo grid RecyclerView -->
