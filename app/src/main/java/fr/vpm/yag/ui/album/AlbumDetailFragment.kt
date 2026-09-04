@@ -10,9 +10,11 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import fr.vpm.yag.MainActivity
 import fr.vpm.yag.databinding.FragmentAlbumDetailBinding
 import fr.vpm.yag.device.model.Album
-import fr.vpm.yag.device.model.DevicePhoto
+import fr.vpm.yag.device.model.isRawPhoto
 import fr.vpm.yag.ui.dashboard.ColumnCountGestureListener
 import fr.vpm.yag.ui.dashboard.GridSpacingItemDecoration
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
@@ -27,6 +29,15 @@ class AlbumDetailFragment : Fragment() {
 
     // Column count for the photo grid (1-6, default 3)
     private var columnCount = 3
+
+    // Header collapse state
+    private var isHeaderCollapsed = false
+    private var totalScrollY = 0
+    private val scrollThreshold = 20 // pixels to scroll before collapsing
+
+    // Filter state
+    private var isFilterEnabled = false
+    private var allPhotos: List<fr.vpm.yag.device.model.Photo> = emptyList()
 
     // Receive album ID as argument
     private val args: AlbumDetailFragmentArgs by navArgs()
@@ -51,7 +62,16 @@ class AlbumDetailFragment : Fragment() {
             setupRecyclerView(album)
             setupPinchToZoom()
             setupActionButtons()
+            // Reset scroll state when album changes
+            resetScrollState()
         }
+    }
+
+    private fun resetScrollState() {
+        totalScrollY = 0
+        isHeaderCollapsed = false
+        // Ensure header is visible
+        binding.actionButtonsHeader.visibility = View.VISIBLE
     }
 
     private fun findAlbumById(albumId: String): Album? {
@@ -59,22 +79,77 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun setupAlbumHeader(album: Album) {
-        binding.albumName.text = album.name ?: "Unknown Album"
+        // Set album name in the toolbar
+        val activity = requireActivity() as? MainActivity
+        activity?.setToolbarTitle(album.name ?: "Unknown Album")
     }
 
     private fun setupRecyclerView(album: Album) {
         val recyclerView = binding.recyclerViewPhotos
         val albumId = album.id ?: return
 
+        // Store all photos for filtering
+        allPhotos = album.photos
+
         recyclerView.layoutManager = GridLayoutManager(requireContext(), columnCount)
-        recyclerView.adapter = PhotoGridAdapter(onPhotoClick = { position ->
+        val adapter = PhotoGridAdapter(onPhotoClick = { position ->
             navigateToPhotoViewer(albumId, position)
         }).apply {
-            submitList(album.photos)
+            submitList(getFilteredPhotos())
         }
+        recyclerView.adapter = adapter
         recyclerView.addItemDecoration(
             GridSpacingItemDecoration(requireContext(), columnCount, 1)
         )
+        
+        // Set up scroll listener to collapse/expand header
+        setupHeaderScrollListener(recyclerView)
+    }
+
+    private fun setupHeaderScrollListener(recyclerView: RecyclerView) {
+        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                
+                totalScrollY += dy
+                
+                if (dy > 0 && !isHeaderCollapsed) {
+                    // Scrolling down - accumulate scroll distance
+                    if (totalScrollY > scrollThreshold) {
+                        collapseHeader()
+                        isHeaderCollapsed = true
+                    }
+                } else if (dy < 0 && isHeaderCollapsed) {
+                    // Scrolling up - immediately expand
+                    expandHeader()
+                    isHeaderCollapsed = false
+                    totalScrollY = 0
+                }
+                
+                // Reset if we're at the top
+                if (totalScrollY < 0) {
+                    totalScrollY = 0
+                }
+            }
+        })
+    }
+
+    private fun collapseHeader() {
+        binding.actionButtonsHeader.animate()
+            .alpha(0f)
+            .setDuration(200)
+            .withEndAction {
+                binding.actionButtonsHeader.visibility = View.GONE
+            }
+            .start()
+    }
+
+    private fun expandHeader() {
+        binding.actionButtonsHeader.visibility = View.VISIBLE
+        binding.actionButtonsHeader.animate()
+            .alpha(1f)
+            .setDuration(200)
+            .start()
     }
 
     private fun navigateToPhotoViewer(albumId: String, photoPosition: Int) {
@@ -107,7 +182,7 @@ class AlbumDetailFragment : Fragment() {
 
     private fun setupActionButtons() {
         binding.filterButton.setOnClickListener {
-            Toast.makeText(requireContext(), "Filter", Toast.LENGTH_SHORT).show()
+            toggleRawFilter()
         }
 
         binding.shareButton.setOnClickListener {
@@ -138,24 +213,11 @@ class AlbumDetailFragment : Fragment() {
     private fun getFilteredPhotos(): List<fr.vpm.yag.device.model.Photo> {
         return if (isFilterEnabled) {
             allPhotos.filterNot { photo ->
-                isRawPhoto(photo)
+                photo.isRawPhoto()
             }
         } else {
             allPhotos
         }
-    }
-
-    private fun isRawPhoto(photo: fr.vpm.yag.device.model.Photo): Boolean {
-        val devicePhoto = photo as? DevicePhoto
-        val path = devicePhoto?.path?.lowercase() ?: return false
-        return path.endsWith(".arw", ignoreCase = true) ||
-                path.endsWith(".cr2", ignoreCase = true) ||
-                path.endsWith(".cr3", ignoreCase = true) ||
-                path.endsWith(".nef", ignoreCase = true) ||
-                path.endsWith(".raf", ignoreCase = true) ||
-                path.endsWith(".dng", ignoreCase = true) ||
-                path.endsWith(".rw2", ignoreCase = true) ||
-                path.endsWith(".raw", ignoreCase = true)
     }
 
     private fun updateGridLayout() {
@@ -175,6 +237,9 @@ class AlbumDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Clear toolbar title when fragment is destroyed
+        val activity = requireActivity() as? MainActivity
+        activity?.setToolbarTitle(null)
         _binding = null
     }
 }

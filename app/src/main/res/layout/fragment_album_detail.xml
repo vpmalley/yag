@@ -6,13 +6,14 @@
     android:layout_height="match_parent"
     tools:context=".ui.album.AlbumDetailFragment">
 
-    <!-- Album name and action buttons -->
+    <!-- Action buttons header that can collapse -->
     <LinearLayout
-        android:id="@+id/albumHeader"
+        android:id="@+id/actionButtonsHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="8dp"
+        android:animateLayoutChanges="true"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
@@ -49,19 +50,6 @@
             android:padding="8dp"
             android:src="@drawable/ic_delete"
             app:tint="?attr/colorOnSurface" />
-
-        <TextView
-            android:id="@+id/albumName"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:gravity="center_vertical"
-            android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline6"
-            android:textColor="?attr/colorOnSurface"
-            tools:text="Album Name" />
     </LinearLayout>
 
     <!-- Photo grid RecyclerView -->
@@ -74,6 +62,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/albumHeader" />
+        app:layout_constraintTop_toBottomOf="@id/actionButtonsHeader" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

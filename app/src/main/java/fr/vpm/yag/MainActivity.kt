@@ -35,6 +35,10 @@ class MainActivity : AppCompatActivity() {
         binding.navView.visibility = if (visible) View.VISIBLE else View.GONE
     }
 
+    fun setToolbarTitle(title: String?) {
+        binding.toolbar.title = title
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
