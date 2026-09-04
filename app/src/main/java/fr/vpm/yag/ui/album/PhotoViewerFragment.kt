@@ -16,6 +16,7 @@ import androidx.viewpager2.widget.ViewPager2
 import fr.vpm.yag.MainActivity
 import fr.vpm.yag.databinding.FragmentPhotoViewerBinding
 import fr.vpm.yag.device.model.DevicePhoto
+import fr.vpm.yag.device.model.isRawPhoto
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
 import androidx.fragment.app.activityViewModels
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +36,10 @@ class PhotoViewerFragment : Fragment() {
 
     // Full screen mode flag
     private var isFullScreen = false
+    
+    // Filter state
+    private val filterEnabled: Boolean
+        get() = args.filterEnabled
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -70,7 +75,16 @@ class PhotoViewerFragment : Fragment() {
     private fun setupViewPager(album: fr.vpm.yag.device.model.Album, initialPosition: Int) {
         val viewPager = binding.viewPager
 
-        // Create adapter with album photos and click listeners
+        // Filter photos if filter is enabled
+        val photosToShow = if (filterEnabled) {
+            album.photos.filterNot { photo ->
+                photo.isRawPhoto()
+            }
+        } else {
+            album.photos
+        }
+
+        // Create adapter with filtered photos and click listeners
         val adapter = PhotoViewerAdapter(
             onPhotoClick = {
                 toggleFullScreen()
@@ -79,7 +93,7 @@ class PhotoViewerFragment : Fragment() {
                 updateFavoriteInMediaStore(devicePhoto, newFavoriteState)
             }
         ).apply {
-            submitList(album.photos)
+            submitList(photosToShow)
         }
         viewPager.adapter = adapter
 

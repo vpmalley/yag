@@ -11,6 +11,7 @@ import fr.vpm.yag.R
 import fr.vpm.yag.databinding.ItemPhotoViewerBinding
 import fr.vpm.yag.device.model.DevicePhoto
 import fr.vpm.yag.device.model.Photo
+import fr.vpm.yag.device.model.isRawPhoto
 
 class PhotoViewerAdapter(
     private val onPhotoClick: () -> Unit = {},
@@ -74,13 +75,7 @@ class PhotoViewerAdapter(
         }
         
         private fun updateRawBadge(devicePhoto: DevicePhoto) {
-            val path = devicePhoto.path?.lowercase()
-            val isRaw = path != null && (path.endsWith(".arw") || 
-                    path.endsWith(".cr2") || 
-                    path.endsWith(".cr3") || 
-                    path.endsWith(".nef") || 
-                    path.endsWith(".raf") || 
-                    path.endsWith(".dng"))
+            val isRaw = devicePhoto.isRawPhoto()
             binding.rawBadge.visibility = if (isRaw) android.view.View.VISIBLE else android.view.View.GONE
         }
         

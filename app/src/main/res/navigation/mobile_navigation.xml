@@ -57,5 +57,9 @@
         <argument
             android:name="photoPosition"
             app:argType="integer" />
+        <argument
+            android:name="filterEnabled"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 </navigation>

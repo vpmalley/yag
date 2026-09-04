@@ -12,6 +12,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.GridLayoutManager
 import fr.vpm.yag.databinding.FragmentAlbumDetailBinding
 import fr.vpm.yag.device.model.Album
+import fr.vpm.yag.device.model.DevicePhoto
 import fr.vpm.yag.ui.dashboard.ColumnCountGestureListener
 import fr.vpm.yag.ui.dashboard.GridSpacingItemDecoration
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
@@ -79,7 +80,8 @@ class AlbumDetailFragment : Fragment() {
     private fun navigateToPhotoViewer(albumId: String, photoPosition: Int) {
         val action = AlbumDetailFragmentDirections.actionAlbumDetailFragmentToPhotoViewerFragment(
             albumId,
-            photoPosition
+            photoPosition,
+            isFilterEnabled
         )
         findNavController().navigate(action)
     }
@@ -115,6 +117,45 @@ class AlbumDetailFragment : Fragment() {
         binding.deleteButton.setOnClickListener {
             Toast.makeText(requireContext(), "Delete", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun toggleRawFilter() {
+        isFilterEnabled = !isFilterEnabled
+        updatePhotoList()
+        val message = if (isFilterEnabled) {
+            "RAW photos hidden"
+        } else {
+            "All photos shown"
+        }
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun updatePhotoList() {
+        val adapter = binding.recyclerViewPhotos.adapter as? PhotoGridAdapter
+        adapter?.submitList(getFilteredPhotos())
+    }
+
+    private fun getFilteredPhotos(): List<fr.vpm.yag.device.model.Photo> {
+        return if (isFilterEnabled) {
+            allPhotos.filterNot { photo ->
+                isRawPhoto(photo)
+            }
+        } else {
+            allPhotos
+        }
+    }
+
+    private fun isRawPhoto(photo: fr.vpm.yag.device.model.Photo): Boolean {
+        val devicePhoto = photo as? DevicePhoto
+        val path = devicePhoto?.path?.lowercase() ?: return false
+        return path.endsWith(".arw", ignoreCase = true) ||
+                path.endsWith(".cr2", ignoreCase = true) ||
+                path.endsWith(".cr3", ignoreCase = true) ||
+                path.endsWith(".nef", ignoreCase = true) ||
+                path.endsWith(".raf", ignoreCase = true) ||
+                path.endsWith(".dng", ignoreCase = true) ||
+                path.endsWith(".rw2", ignoreCase = true) ||
+                path.endsWith(".raw", ignoreCase = true)
     }
 
     private fun updateGridLayout() {
