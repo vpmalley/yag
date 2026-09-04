@@ -41,6 +41,11 @@ class PhotoViewerAdapter(
                 )
             }
             
+            // Show RAW badge if photo has RAW extension
+            if (devicePhoto != null) {
+                updateRawBadge(devicePhoto)
+            }
+            
             // Set click listener for full screen
             binding.fullPhoto.setOnClickListener {
                 onPhotoClick()
@@ -66,6 +71,17 @@ class PhotoViewerAdapter(
             binding.deleteButton.setOnClickListener {
                 Toast.makeText(binding.root.context, "Delete", Toast.LENGTH_SHORT).show()
             }
+        }
+        
+        private fun updateRawBadge(devicePhoto: DevicePhoto) {
+            val path = devicePhoto.path?.lowercase()
+            val isRaw = path != null && (path.endsWith(".arw") || 
+                    path.endsWith(".cr2") || 
+                    path.endsWith(".cr3") || 
+                    path.endsWith(".nef") || 
+                    path.endsWith(".raf") || 
+                    path.endsWith(".dng"))
+            binding.rawBadge.visibility = if (isRaw) android.view.View.VISIBLE else android.view.View.GONE
         }
         
         private fun updateFavoriteButton(devicePhoto: DevicePhoto) {

@@ -13,6 +13,22 @@
         android:contentDescription="photo"
         android:scaleType="fitCenter" />
 
+    <!-- RAW badge overlay (top-right corner) -->
+    <TextView
+        android:id="@+id/rawBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="8dp"
+        android:background="#80000000"
+        android:paddingHorizontal="6dp"
+        android:paddingVertical="3dp"
+        android:text="RAW"
+        android:textAllCaps="true"
+        android:textColor="@android:color/white"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
     <!-- Bottom overlay with action buttons -->
     <LinearLayout
         android:id="@+id/bottomOverlay"
@@ -33,6 +49,12 @@
             android:src="@drawable/ic_share_white_24" />
 
         <!-- Spacer -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Favorite button -->
         <ImageButton
             android:id="@+id/favoriteButton"
             android:layout_width="48dp"
@@ -41,15 +63,6 @@
             android:contentDescription="Favorite"
             android:src="@drawable/ic_heart_outline" />
 
-        <!-- Favorite button -->
-        <ImageButton
-            android:id="@+id/deleteButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Delete"
-            android:src="@drawable/ic_delete" />
-
         <!-- Spacer -->
         <View
             android:layout_width="0dp"
@@ -57,10 +70,13 @@
             android:layout_weight="1" />
 
         <!-- Delete button -->
-        <View
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+        <ImageButton
+            android:id="@+id/deleteButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Delete"
+            android:src="@drawable/ic_delete" />
     </LinearLayout>
 
 </FrameLayout>
