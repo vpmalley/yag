@@ -1,5 +1,7 @@
 package fr.vpm.yag.ui.album
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,13 +13,18 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import fr.vpm.yag.MainActivity
+import fr.vpm.yag.R
 import fr.vpm.yag.databinding.FragmentAlbumDetailBinding
 import fr.vpm.yag.device.model.Album
+import fr.vpm.yag.device.model.DevicePhoto
+import fr.vpm.yag.device.model.Photo
 import fr.vpm.yag.device.model.isRawPhoto
 import fr.vpm.yag.ui.dashboard.ColumnCountGestureListener
 import fr.vpm.yag.ui.dashboard.GridSpacingItemDecoration
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
+import java.io.File
 
 class AlbumDetailFragment : Fragment() {
 
@@ -186,12 +193,138 @@ class AlbumDetailFragment : Fragment() {
         }
 
         binding.shareButton.setOnClickListener {
-            Toast.makeText(requireContext(), "Share", Toast.LENGTH_SHORT).show()
+            showShareOptionsBottomSheet()
         }
 
         binding.deleteButton.setOnClickListener {
             Toast.makeText(requireContext(), "Delete", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun showShareOptionsBottomSheet() {
+        val bottomSheetDialog = BottomSheetDialog(requireContext())
+        val bottomSheetView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.bottom_sheet_share_options, null)
+        
+        bottomSheetDialog.setContentView(bottomSheetView as View)
+        
+        // Set up buttons
+        bottomSheetView.findViewById<View>(R.id.shareAllButton)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            shareAllPhotos()
+        }
+        
+        bottomSheetView.findViewById<View>(R.id.shareFavoritesButton)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            shareFavoritePhotos()
+        }
+        
+        bottomSheetView.findViewById<View>(R.id.shareFavoritesWithRawButton)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            shareFavoritePhotosWithRaw()
+        }
+        
+        bottomSheetDialog.show()
+    }
+
+    private fun shareAllPhotos() {
+        val album = findAlbumById(args.albumId) ?: return
+        val photosToShare = getAllPhotosUris(album.photos)
+        
+        if (photosToShare.isEmpty()) {
+            Toast.makeText(requireContext(), "No photos to share", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        sharePhotos(photosToShare)
+    }
+
+    private fun shareFavoritePhotos() {
+        val album = findAlbumById(args.albumId) ?: return
+        val photosToShare = getFavoritePhotosUris(album.photos)
+        
+        if (photosToShare.isEmpty()) {
+            Toast.makeText(requireContext(), "No favorite photos to share", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        sharePhotos(photosToShare)
+    }
+
+    private fun shareFavoritePhotosWithRaw() {
+        val photosToShare = getFavoritePhotosWithRawMatches(allPhotos)
+        
+        if (photosToShare.isEmpty()) {
+            Toast.makeText(requireContext(), "No favorite photos to share", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        sharePhotos(photosToShare)
+    }
+
+    private fun getAllPhotosUris(photos: List<Photo>): List<Uri> {
+        return photos.mapNotNull { photo ->
+            (photo as? DevicePhoto)?.uri
+        }
+    }
+
+    private fun getFavoritePhotosUris(photos: List<Photo>): List<Uri> {
+        return photos.filter { photo ->
+            (photo as? DevicePhoto)?.isFavorite == true
+        }.mapNotNull { photo ->
+            (photo as? DevicePhoto)?.uri
+        }
+    }
+
+    private fun getFavoritePhotosWithRawMatches(allPhotos: List<Photo>): List<Uri> {
+        val favoritePhotos = allPhotos.filter { photo ->
+            (photo as? DevicePhoto)?.isFavorite == true
+        }
+        
+        val photosToShare = ArrayList<Uri>()
+        val processedFileNames = mutableSetOf<String>()
+        
+        for (favPhoto in favoritePhotos) {
+            val devicePhoto = favPhoto as? DevicePhoto ?: continue
+            val path = devicePhoto.path ?: continue
+            
+            // Extract base filename without extension
+            val baseName = File(path).nameWithoutExtension
+            
+            // Skip if we've already processed this file
+            if (processedFileNames.contains(baseName)) {
+                continue
+            }
+            processedFileNames.add(baseName)
+            
+            // Find all photos with the same base filename (favorite or not, RAW or not)
+            for (photo in allPhotos) {
+                val devicePhotoInner = photo as? DevicePhoto ?: continue
+                val innerPath = devicePhotoInner.path ?: continue
+                val innerBaseName = File(innerPath).nameWithoutExtension
+                
+                if (innerBaseName == baseName) {
+                    devicePhotoInner.uri?.let { uri ->
+                        photosToShare.add(uri)
+                    }
+                }
+            }
+        }
+        
+        return photosToShare
+    }
+
+    private fun sharePhotos(photoUris: List<Uri>) {
+        if (photoUris.isEmpty()) return
+        
+        val shareIntent = Intent().apply {
+            action = Intent.ACTION_SEND_MULTIPLE
+            type = "image/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(photoUris))
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }
+        
+        startActivity(Intent.createChooser(shareIntent, "Share Photos"))
     }
 
     private fun toggleRawFilter() {
