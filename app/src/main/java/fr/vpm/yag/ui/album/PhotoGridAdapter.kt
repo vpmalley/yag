@@ -39,10 +39,32 @@ class PhotoGridAdapter(
                 setPlaceholderBackground()
             }
             
+            // Show RAW badge if photo has RAW extension
+            // Show favorite badge if photo is favorite
+            if (devicePhoto != null) {
+                updateRawBadge(devicePhoto)
+                updateFavoriteBadge(devicePhoto)
+            }
+            
             // Set click listener
             binding.root.setOnClickListener {
                 onPhotoClick(position)
             }
+        }
+        
+        private fun updateRawBadge(devicePhoto: DevicePhoto) {
+            val path = devicePhoto.path?.lowercase()
+            val isRaw = path != null && (path.endsWith(".arw") || 
+                    path.endsWith(".cr2") || 
+                    path.endsWith(".cr3") || 
+                    path.endsWith(".nef") || 
+                    path.endsWith(".raf") || 
+                    path.endsWith(".dng"))
+            binding.rawBadge.visibility = if (isRaw) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        
+        private fun updateFavoriteBadge(devicePhoto: DevicePhoto) {
+            binding.favoriteBadge.visibility = if (devicePhoto.isFavorite) android.view.View.VISIBLE else android.view.View.GONE
         }
         
         private fun setPlaceholderBackground() {

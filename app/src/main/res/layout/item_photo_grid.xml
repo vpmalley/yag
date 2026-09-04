@@ -20,4 +20,31 @@
             android:background="@color/purple_200"
             android:contentDescription="Photo" />
 
+        <!-- RAW badge overlay (top-right corner) -->
+        <TextView
+            android:id="@+id/rawBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="4dp"
+            android:background="#80000000"
+            android:paddingHorizontal="4dp"
+            android:paddingVertical="2dp"
+            android:text="RAW"
+            android:textAllCaps="true"
+            android:textColor="@android:color/white"
+            android:textSize="10sp"
+            android:visibility="gone" />
+
+        <!-- Favorite badge overlay (top-left corner) -->
+        <ImageView
+            android:id="@+id/favoriteBadge"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="top|start"
+            android:layout_margin="4dp"
+            android:src="@drawable/ic_heart_filled"
+            android:visibility="gone" />
+    </FrameLayout>
+
 </com.google.android.material.card.MaterialCardView>
