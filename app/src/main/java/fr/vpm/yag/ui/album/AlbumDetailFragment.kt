@@ -1,8 +1,11 @@
 package fr.vpm.yag.ui.album
 
+import android.content.ContentUris
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -197,7 +200,82 @@ class AlbumDetailFragment : Fragment() {
         }
 
         binding.deleteButton.setOnClickListener {
-            Toast.makeText(requireContext(), "Delete", Toast.LENGTH_SHORT).show()
+            showDeleteOptionsBottomSheet()
+        }
+    }
+
+    private fun showDeleteOptionsBottomSheet() {
+        val bottomSheetDialog = BottomSheetDialog(requireContext())
+        val bottomSheetView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.bottom_sheet_delete_options, null)
+        
+        bottomSheetDialog.setContentView(bottomSheetView as View)
+        
+        bottomSheetView.findViewById<View>(R.id.deleteNonFavoritesButton)?.setOnClickListener {
+            bottomSheetDialog.dismiss()
+            deleteNonFavoritePhotos()
+        }
+        
+        bottomSheetDialog.show()
+    }
+
+    private fun deleteNonFavoritePhotos() {
+        val nonFavoritePhotos = allPhotos.filter { photo ->
+            (photo as? DevicePhoto)?.isFavorite != true
+        }
+        
+        if (nonFavoritePhotos.isEmpty()) {
+            Toast.makeText(requireContext(), "No non-favorite photos to delete", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Count how many will be deleted
+        val count = nonFavoritePhotos.size
+        
+        // Move to recycle bin/trash
+        movePhotosToTrash(nonFavoritePhotos)
+        
+        Toast.makeText(requireContext(), "Moved $count non-favorite photos to recycle bin", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun movePhotosToTrash(photos: List<Photo>) {
+        val uris = photos.mapNotNull { photo ->
+            (photo as? DevicePhoto)?.uri
+        }
+        
+        if (uris.isEmpty()) return
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // API 31+ - use MediaStore trash API
+            // createTrashRequest was introduced in API 31
+            val trashUris = uris.mapNotNull { uri ->
+                val id = try {
+                    ContentUris.parseId(uri)
+                } catch (e: NumberFormatException) {
+                    null
+                } ?: return@mapNotNull null
+                ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+            }
+            
+            // Use MediaStore to create trash request
+            val trashRequest = MediaStore.createTrashRequest(
+                requireContext().contentResolver,
+                trashUris,
+                true  // allow partial deletion
+            )
+            
+            try {
+                trashRequest.send()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Failed to move to trash: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            // For older Android versions, show a message that trash is not supported
+            Toast.makeText(
+                requireContext(),
+                "Recycle bin is only available on Android 11+",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
