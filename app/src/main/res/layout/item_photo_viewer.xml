@@ -4,7 +4,7 @@
     android:layout_height="match_parent">
 
     <!-- Full-screen photo with zoom capability -->
-    <ImageView
+    <fr.vpm.yag.ui.album.ZoomableImageView
         android:id="@+id/fullPhoto"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

@@ -47,7 +47,21 @@ class PhotoViewerAdapter(
                 updateRawBadge(devicePhoto)
             }
             
-            // Set click listener for full screen
+            // Set up zoom listener for the ZoomableImageView
+            (binding.fullPhoto as? ZoomableImageView)?.setOnZoomListener(
+                object : ZoomableImageView.OnZoomListener {
+                    override fun onZoomStarted() {}
+                    override fun onZoomChanged(scale: Float) {}
+                    override fun onZoomEnded() {}
+                    override fun onDoubleTap() {}
+                    override fun onSingleTap() {
+                        // Handle single tap for full screen toggle
+                        onPhotoClick()
+                    }
+                }
+            )
+            
+            // Also keep the click listener for compatibility
             binding.fullPhoto.setOnClickListener {
                 onPhotoClick()
             }
