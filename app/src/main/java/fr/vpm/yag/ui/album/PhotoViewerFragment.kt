@@ -55,10 +55,10 @@ class PhotoViewerFragment : Fragment() {
         val albumId = args.albumId
         val initialPosition = args.photoPosition
         val filterEnabled = args.filterEnabled
-        
+
         // Sync filter state with ViewModel
         albumDetailViewModel.setFilterEnabled(filterEnabled)
-        
+
         val album = findAlbumById(albumId)
 
         if (album != null) {
@@ -75,6 +75,16 @@ class PhotoViewerFragment : Fragment() {
         super.onResume()
         // Restore full screen state if needed
         updateSystemUiVisibility(isFullScreen)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Ensure we exit full screen mode when fragment is paused
+        // This prevents the app from staying in full screen when navigating to another fragment
+        if (isFullScreen) {
+            isFullScreen = false
+            updateSystemUiVisibility(false)
+        }
     }
 
     private fun findAlbumById(albumId: String): fr.vpm.yag.device.model.Album? {
@@ -102,7 +112,7 @@ class PhotoViewerFragment : Fragment() {
 
         // Set initial position
         viewPager.setCurrentItem(initialPosition, false)
-        
+
         // Observe changes to display photos (in case filter/sort changes)
         albumDetailViewModel.displayPhotos.observe(viewLifecycleOwner) { photos ->
             adapter.submitList(photos)
@@ -137,20 +147,22 @@ class PhotoViewerFragment : Fragment() {
     private fun toggleFullScreen() {
         isFullScreen = !isFullScreen
         updateSystemUiVisibility(isFullScreen)
-
-        // Also hide/show the Toolbar and BottomNavigationView
-        val activity = requireActivity() as? MainActivity
-        activity?.let { mainActivity ->
-            mainActivity.setToolbarVisibility(!isFullScreen)
-            mainActivity.setNavBarVisibility(!isFullScreen)
-        }
     }
 
     private fun updateSystemUiVisibility(fullScreen: Boolean) {
-        val activity = requireActivity()
+        val activityWindow = activity?.window
+        if (activityWindow == null) {
+            Log.e(ContentValues.TAG, "Activity window is null")
+            return
+        }
+        // Also hide/show the Toolbar and BottomNavigationView
+        (activity as? MainActivity)?.let { mainActivity ->
+            mainActivity.setToolbarVisibility(!isFullScreen)
+            mainActivity.setNavBarVisibility(!isFullScreen)
+        }
         if (fullScreen) {
             // Hide system UI
-            WindowInsetsControllerCompat(activity.window, binding.root).let { controller ->
+            WindowInsetsControllerCompat(activityWindow, binding.root).let { controller ->
                 controller.hide(WindowInsetsCompat.Type.systemBars())
                 controller.systemBarsBehavior =
                     WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -158,7 +170,7 @@ class PhotoViewerFragment : Fragment() {
         } else {
             // Show system UI
             WindowInsetsControllerCompat(
-                activity.window,
+                activityWindow,
                 binding.root
             ).show(WindowInsetsCompat.Type.systemBars())
         }
@@ -166,6 +178,12 @@ class PhotoViewerFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Ensure we exit full screen mode when fragment is destroyed
+        // This prevents the app from staying in full screen when navigating back
+        if (isFullScreen) {
+            isFullScreen = false
+            updateSystemUiVisibility(false)
+        }
         _binding = null
     }
 }

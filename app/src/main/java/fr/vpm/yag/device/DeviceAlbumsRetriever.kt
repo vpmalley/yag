@@ -56,14 +56,13 @@ class DeviceAlbumsRetriever {
                     localImageCursor.getColumnIndex(MediaColumns.BUCKET_DISPLAY_NAME)
                 val bucketName =
                     localImageCursor.getString(bucketNameColumnIndex)
-                
+
                 // Create album if it doesn't exist
                 if (!albumsById.containsKey(bucketId)) {
-                    albumsById[bucketId] = 
+                    albumsById[bucketId] =
                         Album(bucketId, bucketName, null, mutableListOf(), Album.SOURCE_DEVICE)
-                    Log.d("bg-media", "Created album: $bucketName")
                 }
-                
+
                 // Extract photo for EVERY row and add to album
                 val idColumnIndex = localImageCursor.getColumnIndex(BaseColumns._ID)
                 val photoId = localImageCursor.getLong(idColumnIndex)
