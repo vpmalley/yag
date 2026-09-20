@@ -15,7 +15,8 @@ import fr.vpm.yag.device.model.isRawPhoto
 
 class PhotoViewerAdapter(
     private val onPhotoClick: () -> Unit = {},
-    private val onFavoriteClick: (DevicePhoto, Boolean) -> Unit = { _, _ -> }
+    private val onFavoriteClick: (DevicePhoto, Boolean) -> Unit = { _, _ -> },
+    private val onDeleteClick: (DevicePhoto) -> Unit = {}
 ) : RecyclerView.Adapter<PhotoViewerAdapter.PhotoViewHolder>() {
 
     private var photos: List<Photo> = emptyList()
@@ -82,9 +83,11 @@ class PhotoViewerAdapter(
                 Toast.makeText(binding.root.context, "Share", Toast.LENGTH_SHORT).show()
             }
             
-            // Handle delete button - show toast for now
-            binding.deleteButton.setOnClickListener {
-                Toast.makeText(binding.root.context, "Delete", Toast.LENGTH_SHORT).show()
+            // Handle delete button
+            if (devicePhoto != null) {
+                binding.deleteButton.setOnClickListener {
+                    onDeleteClick(devicePhoto)
+                }
             }
         }
         

@@ -1,24 +1,26 @@
 package fr.vpm.yag.ui.album
 
+import android.content.ContentUris
 import android.content.ContentValues
-import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import androidx.viewpager2.widget.ViewPager2
 import fr.vpm.yag.MainActivity
 import fr.vpm.yag.databinding.FragmentPhotoViewerBinding
+import fr.vpm.yag.device.model.Album
 import fr.vpm.yag.device.model.DevicePhoto
-import fr.vpm.yag.device.model.isRawPhoto
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
-import androidx.fragment.app.activityViewModels
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -104,6 +106,9 @@ class PhotoViewerFragment : Fragment() {
             },
             onFavoriteClick = { devicePhoto, newFavoriteState ->
                 updateFavoriteInMediaStore(devicePhoto, newFavoriteState)
+            },
+            onDeleteClick = { devicePhoto ->
+                showDeleteConfirmation(devicePhoto)
             }
         ).apply {
             submitList(photosToShow)
@@ -140,6 +145,92 @@ class PhotoViewerFragment : Fragment() {
                 Log.d("PhotoViewer", "Successfully updated IS_FAVORITE for photo ${devicePhoto.id}")
             } catch (e: Exception) {
                 Log.e("PhotoViewer", "Failed to update IS_FAVORITE for photo ${devicePhoto.id}", e)
+            }
+        }
+    }
+
+    private fun showDeleteConfirmation(devicePhoto: DevicePhoto) {
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("Delete Photo")
+            .setMessage("Are you sure you want to move this photo to the recycle bin?")
+            .setPositiveButton("Delete") { _, _ ->
+                movePhotoToTrash(devicePhoto)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun movePhotoToTrash(devicePhoto: DevicePhoto) {
+        val uri = devicePhoto.uri ?: return
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            // API 31+ - use MediaStore trash API
+            val trashUri = try {
+                val id = ContentUris.parseId(uri)
+                ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+            } catch (e: NumberFormatException) {
+                Toast.makeText(requireContext(), "Failed to move to trash: Invalid URI", Toast.LENGTH_LONG).show()
+                return
+            }
+            
+            // Use MediaStore to create trash request
+            val trashRequest = MediaStore.createTrashRequest(
+                requireContext().contentResolver,
+                listOf(trashUri),
+                true  // allow partial deletion
+            )
+            
+            try {
+                trashRequest.send()
+                Toast.makeText(requireContext(), "Photo moved to recycle bin", Toast.LENGTH_SHORT).show()
+                // Remove the photo from the current list and notify adapter
+                removePhotoFromList(devicePhoto)
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Failed to move to trash: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            // For older Android versions, show a message that trash is not supported
+            Toast.makeText(
+                requireContext(),
+                "Recycle bin is only available on Android 11+",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun removePhotoFromList(devicePhoto: DevicePhoto) {
+        // Get current album
+        val currentAlbum = albumDetailViewModel.currentAlbum.value ?: return
+        
+        // Create a new list without the deleted photo
+        val updatedPhotos = currentAlbum.photos.filterNot { photo ->
+            val p = photo as? DevicePhoto
+            p?.id == devicePhoto.id
+        }.toMutableList()
+        
+        // Create a new album with the updated photos
+        val updatedAlbum = Album(
+            id = currentAlbum.id,
+            name = currentAlbum.name,
+            details = currentAlbum.details,
+            photos = updatedPhotos,
+            source = currentAlbum.source
+        )
+        
+        // Update the ViewModel with the new album
+        albumDetailViewModel.setAlbum(updatedAlbum)
+        
+        // If we deleted the current photo, we may need to navigate back or adjust position
+        val displayPhotos = albumDetailViewModel.getDisplayPhotos()
+        if (displayPhotos.isEmpty()) {
+            // If no photos left, navigate back
+            findNavController().popBackStack()
+        } else {
+            // Check if we need to adjust the current position
+            val currentPosition = args.photoPosition
+            if (currentPosition >= displayPhotos.size) {
+                // If current position is now out of bounds, navigate back
+                findNavController().popBackStack()
             }
         }
     }
