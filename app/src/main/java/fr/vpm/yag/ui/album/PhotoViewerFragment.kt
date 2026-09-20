@@ -2,6 +2,8 @@ package fr.vpm.yag.ui.album
 
 import android.content.ContentUris
 import android.content.ContentValues
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
@@ -109,6 +111,9 @@ class PhotoViewerFragment : Fragment() {
             },
             onDeleteClick = { devicePhoto ->
                 showDeleteConfirmation(devicePhoto)
+            },
+            onShareClick = { devicePhoto ->
+                sharePhoto(devicePhoto)
             }
         ).apply {
             submitList(photosToShow)
@@ -233,6 +238,19 @@ class PhotoViewerFragment : Fragment() {
                 findNavController().popBackStack()
             }
         }
+    }
+
+    private fun sharePhoto(devicePhoto: DevicePhoto) {
+        val uri = devicePhoto.uri ?: return
+        
+        val shareIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            type = "image/*"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        }
+        
+        startActivity(Intent.createChooser(shareIntent, "Share Photo"))
     }
 
     private fun toggleFullScreen() {

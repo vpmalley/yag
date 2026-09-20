@@ -16,7 +16,8 @@ import fr.vpm.yag.device.model.isRawPhoto
 class PhotoViewerAdapter(
     private val onPhotoClick: () -> Unit = {},
     private val onFavoriteClick: (DevicePhoto, Boolean) -> Unit = { _, _ -> },
-    private val onDeleteClick: (DevicePhoto) -> Unit = {}
+    private val onDeleteClick: (DevicePhoto) -> Unit = {},
+    private val onShareClick: (DevicePhoto) -> Unit = {}
 ) : RecyclerView.Adapter<PhotoViewerAdapter.PhotoViewHolder>() {
 
     private var photos: List<Photo> = emptyList()
@@ -78,9 +79,11 @@ class PhotoViewerAdapter(
                 }
             }
             
-            // Handle share button - show toast for now
-            binding.shareButton.setOnClickListener {
-                Toast.makeText(binding.root.context, "Share", Toast.LENGTH_SHORT).show()
+            // Handle share button
+            if (devicePhoto != null) {
+                binding.shareButton.setOnClickListener {
+                    onShareClick(devicePhoto)
+                }
             }
             
             // Handle delete button
