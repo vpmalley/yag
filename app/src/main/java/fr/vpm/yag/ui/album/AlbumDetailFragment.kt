@@ -34,8 +34,11 @@ class AlbumDetailFragment : Fragment() {
     private var _binding: FragmentAlbumDetailBinding? = null
     private val binding get() = _binding!!
 
-    // Share DeviceAlbumViewModel with other fragments
+    // Share DeviceAlbumViewModel with other fragments for album list
     private val deviceAlbumViewModel: DeviceAlbumViewModel by activityViewModels()
+
+    // Share AlbumDetailViewModel with PhotoViewerFragment for sorting/filtering
+    private val albumDetailViewModel: AlbumDetailViewModel by activityViewModels()
 
     // Column count for the photo grid (1-6, default 3)
     private var columnCount = 3
@@ -44,10 +47,6 @@ class AlbumDetailFragment : Fragment() {
     private var isHeaderCollapsed = false
     private var totalScrollY = 0
     private val scrollThreshold = 20 // pixels to scroll before collapsing
-
-    // Filter state
-    private var isFilterEnabled = false
-    private var allPhotos: List<fr.vpm.yag.device.model.Photo> = emptyList()
 
     // Receive album ID as argument
     private val args: AlbumDetailFragmentArgs by navArgs()
@@ -68,8 +67,15 @@ class AlbumDetailFragment : Fragment() {
         val album = findAlbumById(albumId)
 
         if (album != null) {
+            // Set the album in the AlbumDetailViewModel
+            albumDetailViewModel.setAlbum(album)
+            
+            // Sync filter state if coming from PhotoViewer
+            val currentFilterState = albumDetailViewModel.isFilterEnabled()
+            albumDetailViewModel.setFilterEnabled(currentFilterState)
+            
             setupAlbumHeader(album)
-            setupRecyclerView(album)
+            setupRecyclerView()
             setupPinchToZoom()
             setupActionButtons()
             // Reset scroll state when album changes
@@ -94,18 +100,15 @@ class AlbumDetailFragment : Fragment() {
         activity?.setToolbarTitle(album.name ?: "Unknown Album")
     }
 
-    private fun setupRecyclerView(album: Album) {
+    private fun setupRecyclerView() {
         val recyclerView = binding.recyclerViewPhotos
-        val albumId = album.id ?: return
-
-        // Store all photos for filtering
-        allPhotos = album.photos
+        val albumId = args.albumId ?: return
 
         recyclerView.layoutManager = GridLayoutManager(requireContext(), columnCount)
         val adapter = PhotoGridAdapter(onPhotoClick = { position ->
             navigateToPhotoViewer(albumId, position)
         }).apply {
-            submitList(getFilteredPhotos())
+            submitList(albumDetailViewModel.getDisplayPhotos())
         }
         recyclerView.adapter = adapter
         recyclerView.addItemDecoration(
@@ -114,6 +117,11 @@ class AlbumDetailFragment : Fragment() {
         
         // Set up scroll listener to collapse/expand header
         setupHeaderScrollListener(recyclerView)
+        
+        // Observe changes to display photos and update adapter
+        albumDetailViewModel.displayPhotos.observe(viewLifecycleOwner) { photos ->
+            adapter.submitList(photos)
+        }
     }
 
     private fun setupHeaderScrollListener(recyclerView: RecyclerView) {
@@ -163,10 +171,14 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun navigateToPhotoViewer(albumId: String, photoPosition: Int) {
+        // Set the current position in the ViewModel before navigating
+        albumDetailViewModel.setCurrentPhotoPosition(photoPosition)
+        
+        // We only need to pass the album ID now, the ViewModel will have the rest
         val action = AlbumDetailFragmentDirections.actionAlbumDetailFragmentToPhotoViewerFragment(
             albumId,
             photoPosition,
-            isFilterEnabled
+            albumDetailViewModel.isFilterEnabled()
         )
         findNavController().navigate(action)
     }
@@ -220,6 +232,7 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun deleteNonFavoritePhotos() {
+        val allPhotos = albumDetailViewModel.getDisplayPhotos()
         val nonFavoritePhotos = allPhotos.filter { photo ->
             (photo as? DevicePhoto)?.isFavorite != true
         }
@@ -306,8 +319,7 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun shareAllPhotos() {
-        val album = findAlbumById(args.albumId) ?: return
-        val photosToShare = getAllPhotosUris(album.photos)
+        val photosToShare = getAllPhotosUris(albumDetailViewModel.getDisplayPhotos())
         
         if (photosToShare.isEmpty()) {
             Toast.makeText(requireContext(), "No photos to share", Toast.LENGTH_SHORT).show()
@@ -318,8 +330,7 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun shareFavoritePhotos() {
-        val album = findAlbumById(args.albumId) ?: return
-        val photosToShare = getFavoritePhotosUris(album.photos)
+        val photosToShare = getFavoritePhotosUris(albumDetailViewModel.getDisplayPhotos())
         
         if (photosToShare.isEmpty()) {
             Toast.makeText(requireContext(), "No favorite photos to share", Toast.LENGTH_SHORT).show()
@@ -330,6 +341,7 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun shareFavoritePhotosWithRaw() {
+        val allPhotos = albumDetailViewModel.getDisplayPhotos()
         val photosToShare = getFavoritePhotosWithRawMatches(allPhotos)
         
         if (photosToShare.isEmpty()) {
@@ -406,29 +418,13 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun toggleRawFilter() {
-        isFilterEnabled = !isFilterEnabled
-        updatePhotoList()
-        val message = if (isFilterEnabled) {
+        albumDetailViewModel.toggleFilter()
+        val message = if (albumDetailViewModel.isFilterEnabled()) {
             "RAW photos hidden"
         } else {
             "All photos shown"
         }
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-    }
-
-    private fun updatePhotoList() {
-        val adapter = binding.recyclerViewPhotos.adapter as? PhotoGridAdapter
-        adapter?.submitList(getFilteredPhotos())
-    }
-
-    private fun getFilteredPhotos(): List<fr.vpm.yag.device.model.Photo> {
-        return if (isFilterEnabled) {
-            allPhotos.filterNot { photo ->
-                photo.isRawPhoto()
-            }
-        } else {
-            allPhotos
-        }
     }
 
     private fun updateGridLayout() {

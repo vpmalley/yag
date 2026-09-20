@@ -28,18 +28,17 @@ class PhotoViewerFragment : Fragment() {
     private var _binding: FragmentPhotoViewerBinding? = null
     private val binding get() = _binding!!
 
-    // Share DeviceAlbumViewModel with other fragments
+    // Share DeviceAlbumViewModel with other fragments for album list
     private val deviceAlbumViewModel: DeviceAlbumViewModel by activityViewModels()
+
+    // Share AlbumDetailViewModel with AlbumDetailFragment for sorting/filtering
+    private val albumDetailViewModel: AlbumDetailViewModel by activityViewModels()
 
     // Receive arguments
     private val args: PhotoViewerFragmentArgs by navArgs()
 
     // Full screen mode flag
     private var isFullScreen = false
-    
-    // Filter state
-    private val filterEnabled: Boolean
-        get() = args.filterEnabled
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -55,10 +54,20 @@ class PhotoViewerFragment : Fragment() {
 
         val albumId = args.albumId
         val initialPosition = args.photoPosition
+        val filterEnabled = args.filterEnabled
+        
+        // Sync filter state with ViewModel
+        albumDetailViewModel.setFilterEnabled(filterEnabled)
+        
         val album = findAlbumById(albumId)
 
         if (album != null) {
-            setupViewPager(album, initialPosition)
+            // Set the album in the ViewModel if not already set
+            if (albumDetailViewModel.getAlbumId() != albumId) {
+                albumDetailViewModel.setAlbum(album)
+                albumDetailViewModel.setFilterEnabled(filterEnabled)
+            }
+            setupViewPager(initialPosition)
         }
     }
 
@@ -72,17 +81,11 @@ class PhotoViewerFragment : Fragment() {
         return deviceAlbumViewModel.albums.value?.firstOrNull { it.id == albumId }
     }
 
-    private fun setupViewPager(album: fr.vpm.yag.device.model.Album, initialPosition: Int) {
+    private fun setupViewPager(initialPosition: Int) {
         val viewPager = binding.viewPager
 
-        // Filter photos if filter is enabled
-        val photosToShow = if (filterEnabled) {
-            album.photos.filterNot { photo ->
-                photo.isRawPhoto()
-            }
-        } else {
-            album.photos
-        }
+        // Get the sorted and filtered photos from the ViewModel
+        val photosToShow = albumDetailViewModel.getDisplayPhotos()
 
         // Create adapter with filtered photos and click listeners
         val adapter = PhotoViewerAdapter(
@@ -99,6 +102,11 @@ class PhotoViewerFragment : Fragment() {
 
         // Set initial position
         viewPager.setCurrentItem(initialPosition, false)
+        
+        // Observe changes to display photos (in case filter/sort changes)
+        albumDetailViewModel.displayPhotos.observe(viewLifecycleOwner) { photos ->
+            adapter.submitList(photos)
+        }
     }
 
     private fun updateFavoriteInMediaStore(devicePhoto: DevicePhoto, isFavorite: Boolean) {
