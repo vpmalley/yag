@@ -354,11 +354,11 @@ class PhotoViewerFragment : Fragment() {
             bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
             Log.d("photo", "bottom sheet behavior set up")
 
+            bottomSheetBehavior.isHideable = true
             // Configure bottom sheet behavior
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             Log.d("photo", "bottom sheet is ${bottomSheetBehavior.state}")
 //            bottomSheetBehavior.skipCollapsed = true
-            bottomSheetBehavior.isHideable = true
             bottomSheetBehavior.isDraggable = true  // Disable dragging, only show via swipe up
             bottomSheetBehavior.addBottomSheetCallback(object :
                 BottomSheetBehavior.BottomSheetCallback() {

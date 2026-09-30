@@ -16,12 +16,12 @@ class FlowLayout @JvmOverloads constructor(
 ) : ViewGroup(context, attrs, defStyleAttr) {
 
     private var horizontalSpacing = 8
-    private var verticalSpacing = 8
+    private var verticalSpacing = 4
 
     init {
         val density = resources.displayMetrics.density
         horizontalSpacing = (8 * density).toInt()
-        verticalSpacing = (8 * density).toInt()
+        verticalSpacing = (2 * density).toInt()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {

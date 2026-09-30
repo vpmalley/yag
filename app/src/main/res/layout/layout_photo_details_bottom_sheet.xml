@@ -40,55 +40,6 @@
                 android:paddingHorizontal="24dp">
 
                 <!-- Photo name -->
-                <TextView
-                    android:id="@+id/photoName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:textColor="@android:color/white"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-
-                <!-- Photo path -->
-                <TextView
-                    android:id="@+id/photoPath"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="16dp"
-                    android:alpha="0.7"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp" />
-
-                <!-- File size -->
-                <TextView
-                    android:id="@+id/fileSize"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="24dp"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp" />
-
-                <!-- EXIF Section Header -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="EXIF Data"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <!-- EXIF Grid -->
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="EXIF Tags"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <!-- EXIF Tags Section Header -->
                 <GridLayout
                     android:id="@+id/exifGrid"
                     android:layout_width="match_parent"
@@ -207,13 +158,61 @@
                     </LinearLayout>
                 </GridLayout>
 
+                <!-- Photo path -->
+                <TextView
+                    android:id="@+id/photoPath"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:alpha="0.7"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp" />
+
+                <!-- File size -->
+                <TextView
+                    android:id="@+id/fileSize"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp" />
+
+                <!-- EXIF Section Header -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="EXIF Data"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- EXIF Grid -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="EXIF Tags"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- EXIF Tags Section Header -->
+                <TextView
+                    android:id="@+id/photoName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
                 <!-- EXIF Tags Flow -->
                 <fr.vpm.yag.ui.album.FlowLayout
                     android:id="@+id/exifTagsContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingBottom="8dp" />
+                    android:orientation="horizontal" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </LinearLayout>
