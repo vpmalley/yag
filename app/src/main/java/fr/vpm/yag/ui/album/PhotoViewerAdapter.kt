@@ -1,6 +1,7 @@
 package fr.vpm.yag.ui.album
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
@@ -17,7 +18,8 @@ class PhotoViewerAdapter(
     private val onPhotoClick: () -> Unit = {},
     private val onFavoriteClick: (DevicePhoto, Boolean) -> Unit = { _, _ -> },
     private val onDeleteClick: (DevicePhoto) -> Unit = {},
-    private val onShareClick: (DevicePhoto) -> Unit = {}
+    private val onShareClick: (DevicePhoto) -> Unit = {},
+    private val onPhotoLoaded: (position: Int, photoView: View) -> Unit = { _, _ -> }
 ) : RecyclerView.Adapter<PhotoViewerAdapter.PhotoViewHolder>() {
 
     private var photos: List<Photo> = emptyList()
@@ -25,7 +27,7 @@ class PhotoViewerAdapter(
     inner class PhotoViewHolder(private val binding: ItemPhotoViewerBinding) : 
         RecyclerView.ViewHolder(binding.root) {
         
-        fun bind(photo: Photo) {
+        fun bind(photo: Photo, position: Int) {
             val devicePhoto = photo as? DevicePhoto
             val uri = devicePhoto?.uri
             
@@ -43,6 +45,9 @@ class PhotoViewerAdapter(
                     binding.root.context.getColor(android.R.color.black)
                 )
             }
+            
+            // Notify that this photo has been loaded
+            onPhotoLoaded(position, binding.fullPhoto)
             
             // Show RAW badge if photo has RAW extension
             if (devicePhoto != null) {
@@ -118,7 +123,7 @@ class PhotoViewerAdapter(
     }
 
     override fun onBindViewHolder(holder: PhotoViewHolder, position: Int) {
-        holder.bind(photos[position])
+        holder.bind(photos[position], position)
     }
 
     override fun getItemCount(): Int = photos.size
