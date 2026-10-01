@@ -41,10 +41,20 @@ class AlbumDetailViewModel : ViewModel() {
     private val _currentPhotoPosition = MutableLiveData<Int>()
     val currentPhotoPosition: LiveData<Int> = _currentPhotoPosition
 
+    // Selection state - track selected photo IDs
+    private val _selectedPhotoIds = MutableLiveData<Set<Long>>()
+    val selectedPhotoIds: LiveData<Set<Long>> = _selectedPhotoIds
+
+    // Selection mode
+    private val _isSelectionMode = MutableLiveData<Boolean>()
+    val isSelectionMode: LiveData<Boolean> = _isSelectionMode
+
     init {
         _isFilterEnabled.value = false
         _sortOrder.value = SortOrder.DATE_NEWEST_FIRST
         _currentPhotoPosition.value = 0
+        _selectedPhotoIds.value = emptySet()
+        _isSelectionMode.value = false
     }
 
     /**
@@ -185,6 +195,107 @@ class AlbumDetailViewModel : ViewModel() {
         return allPhotos.any { 
             val existingPhoto = it as? DevicePhoto
             existingPhoto?.uri == targetPhoto?.uri
+        }
+    }
+
+    // Selection methods
+
+    /**
+     * Enable or disable selection mode
+     */
+    fun setSelectionMode(enabled: Boolean) {
+        _isSelectionMode.value = enabled
+        // Clear selection when exiting selection mode
+        if (!enabled) {
+            clearSelection()
+        }
+    }
+
+    /**
+     * Toggle selection mode
+     */
+    fun toggleSelectionMode() {
+        _isSelectionMode.value = _isSelectionMode.value != true
+        // Clear selection when entering selection mode
+        if (_isSelectionMode.value == true) {
+            clearSelection()
+        }
+    }
+
+    /**
+     * Check if selection mode is active
+     */
+    fun isSelectionModeActive(): Boolean {
+        return _isSelectionMode.value ?: false
+    }
+
+    /**
+     * Select or deselect a photo by its ID
+     */
+    fun togglePhotoSelection(photoId: Long) {
+        val currentSelection = _selectedPhotoIds.value ?: emptySet()
+        val newSelection = if (currentSelection.contains(photoId)) {
+            currentSelection - photoId
+        } else {
+            currentSelection + photoId
+        }
+        _selectedPhotoIds.value = newSelection
+    }
+
+    /**
+     * Select a photo by its ID
+     */
+    fun selectPhoto(photoId: Long) {
+        val currentSelection = _selectedPhotoIds.value ?: emptySet()
+        _selectedPhotoIds.value = currentSelection + photoId
+    }
+
+    /**
+     * Deselect a photo by its ID
+     */
+    fun deselectPhoto(photoId: Long) {
+        val currentSelection = _selectedPhotoIds.value ?: emptySet()
+        _selectedPhotoIds.value = currentSelection - photoId
+    }
+
+    /**
+     * Check if a photo is selected
+     */
+    fun isPhotoSelected(photoId: Long): Boolean {
+        return _selectedPhotoIds.value?.contains(photoId) ?: false
+    }
+
+    /**
+     * Clear all selections
+     */
+    fun clearSelection() {
+        _selectedPhotoIds.value = emptySet()
+    }
+
+    /**
+     * Select all photos
+     */
+    fun selectAllPhotos() {
+        val allPhotos = _displayPhotos.value ?: emptyList()
+        val allIds = allPhotos.mapNotNull { (it as? DevicePhoto)?.id }
+        _selectedPhotoIds.value = allIds.toSet()
+    }
+
+    /**
+     * Get count of selected photos
+     */
+    fun getSelectedCount(): Int {
+        return _selectedPhotoIds.value?.size ?: 0
+    }
+
+    /**
+     * Get list of selected photos
+     */
+    fun getSelectedPhotos(): List<Photo> {
+        val selectedIds = _selectedPhotoIds.value ?: emptySet()
+        val allPhotos = _displayPhotos.value ?: emptyList()
+        return allPhotos.filter { photo ->
+            selectedIds.contains((photo as? DevicePhoto)?.id)
         }
     }
 }

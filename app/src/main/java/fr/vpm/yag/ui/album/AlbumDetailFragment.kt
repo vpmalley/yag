@@ -102,14 +102,23 @@ class AlbumDetailFragment : Fragment() {
 
     private fun setupRecyclerView() {
         val recyclerView = binding.recyclerViewPhotos
-        val albumId = args.albumId ?: return
 
-        recyclerView.layoutManager = GridLayoutManager(requireContext(), columnCount)
-        val adapter = PhotoGridAdapter(onPhotoClick = { position ->
-            navigateToPhotoViewer(albumId, position)
-        }).apply {
+        val adapter = PhotoGridAdapter(
+            onPhotoClick = { position ->
+                handlePhotoClick(position)
+            },
+            onPhotoLongClick = { position ->
+                handlePhotoLongClick(position)
+            },
+            isSelectionMode = { albumDetailViewModel.isSelectionModeActive() },
+            isPhotoSelected = { photoId ->
+                albumDetailViewModel.isPhotoSelected(photoId)
+            }
+        ).apply {
             submitList(albumDetailViewModel.getDisplayPhotos())
         }
+        
+        recyclerView.layoutManager = GridLayoutManager(requireContext(), columnCount)
         recyclerView.adapter = adapter
         recyclerView.addItemDecoration(
             GridSpacingItemDecoration(requireContext(), columnCount, 1)
@@ -121,6 +130,17 @@ class AlbumDetailFragment : Fragment() {
         // Observe changes to display photos and update adapter
         albumDetailViewModel.displayPhotos.observe(viewLifecycleOwner) { photos ->
             adapter.submitList(photos)
+        }
+        
+        // Observe selection state changes to refresh adapter
+        albumDetailViewModel.selectedPhotoIds.observe(viewLifecycleOwner) { _ ->
+            adapter.notifyDataSetChanged()
+            updateSelectionCountText()
+        }
+        
+        // Observe selection mode changes
+        albumDetailViewModel.isSelectionMode.observe(viewLifecycleOwner) { isSelectionMode ->
+            updateSelectionModeUI(isSelectionMode)
         }
     }
 
@@ -183,6 +203,53 @@ class AlbumDetailFragment : Fragment() {
         findNavController().navigate(action)
     }
 
+    private fun handlePhotoClick(position: Int) {
+        val photos = albumDetailViewModel.getDisplayPhotos()
+        if (position >= 0 && position < photos.size) {
+            val photo = photos[position] as? DevicePhoto ?: return
+            
+            if (albumDetailViewModel.isSelectionModeActive()) {
+                // In selection mode - toggle photo selection
+                albumDetailViewModel.togglePhotoSelection(photo.id)
+            } else {
+                // Normal mode - navigate to photo viewer
+                navigateToPhotoViewer(args.albumId, position)
+            }
+        }
+    }
+
+    private fun handlePhotoLongClick(position: Int) {
+        val photos = albumDetailViewModel.getDisplayPhotos()
+        if (position >= 0 && position < photos.size) {
+            val photo = photos[position] as? DevicePhoto ?: return
+            
+            // Enter selection mode and select this photo
+            albumDetailViewModel.setSelectionMode(true)
+            albumDetailViewModel.selectPhoto(photo.id)
+        }
+    }
+
+    private fun updateSelectionModeUI(isSelectionMode: Boolean) {
+        // Show/hide selection-related UI
+        binding.actionButtonsHeader.visibility = if (isSelectionMode) View.GONE else View.VISIBLE
+        binding.selectionActionBar.visibility = if (isSelectionMode) View.VISIBLE else View.GONE
+        
+        // Update title to show selection count when in selection mode
+        val activity = requireActivity() as? MainActivity
+        if (isSelectionMode) {
+            updateSelectionCountText()
+            activity?.setToolbarTitle("Select photos")
+        } else {
+            val album = findAlbumById(args.albumId)
+            activity?.setToolbarTitle(album?.name ?: "Unknown Album")
+        }
+    }
+
+    private fun updateSelectionCountText() {
+        val selectedCount = albumDetailViewModel.getSelectedCount()
+        binding.selectionCountText.text = "$selectedCount selected"
+    }
+
     private fun setupPinchToZoom() {
         val scaleGestureDetector = ColumnCountGestureListener.create(
             context = requireContext(),
@@ -214,6 +281,37 @@ class AlbumDetailFragment : Fragment() {
         binding.deleteButton.setOnClickListener {
             showDeleteOptionsBottomSheet()
         }
+
+        // Setup selection action bar
+        setupSelectionActionBar()
+    }
+
+    private fun setupSelectionActionBar() {
+        binding.selectAllButton.setOnClickListener {
+            albumDetailViewModel.selectAllPhotos()
+        }
+
+        binding.shareSelectedButton.setOnClickListener {
+            shareSelectedPhotos()
+        }
+
+        binding.cancelSelectionButton.setOnClickListener {
+            albumDetailViewModel.setSelectionMode(false)
+        }
+    }
+
+    private fun shareSelectedPhotos() {
+        val selectedPhotos = albumDetailViewModel.getSelectedPhotos()
+        val photoUris = selectedPhotos.mapNotNull { photo ->
+            (photo as? DevicePhoto)?.uri
+        }
+        
+        if (photoUris.isEmpty()) {
+            Toast.makeText(requireContext(), "No photos selected", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        sharePhotos(photoUris)
     }
 
     private fun showDeleteOptionsBottomSheet() {
@@ -444,6 +542,8 @@ class AlbumDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        // Exit selection mode when fragment is destroyed
+        albumDetailViewModel.setSelectionMode(false)
         // Clear toolbar title when fragment is destroyed
         val activity = requireActivity() as? MainActivity
         activity?.setToolbarTitle(null)

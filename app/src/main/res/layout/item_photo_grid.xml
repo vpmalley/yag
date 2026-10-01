@@ -45,6 +45,17 @@
             android:layout_margin="4dp"
             android:src="@drawable/ic_heart_filled"
             android:visibility="gone" />
+
+        <!-- Selection overlay - checkmark on selected items -->
+        <ImageView
+            android:id="@+id/selectionCheckmark"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_check_circle"
+            android:visibility="gone"
+            android:background="#80000000"
+            android:padding="4dp" />
     </FrameLayout>
 
 </com.google.android.material.card.MaterialCardView>

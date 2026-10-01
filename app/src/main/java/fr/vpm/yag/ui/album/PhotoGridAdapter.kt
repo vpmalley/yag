@@ -13,7 +13,10 @@ import fr.vpm.yag.device.model.Photo
 import fr.vpm.yag.device.model.isRawPhoto
 
 class PhotoGridAdapter(
-    private val onPhotoClick: (Int) -> Unit = { _ -> }
+    private val onPhotoClick: (Int) -> Unit = { _ -> },
+    private val onPhotoLongClick: (Int) -> Unit = { _ -> },
+    private val isSelectionMode: () -> Boolean = { false },
+    private val isPhotoSelected: (Long) -> Boolean = { false }
 ) : RecyclerView.Adapter<PhotoGridAdapter.PhotoViewHolder>() {
 
     private var photos: List<Photo> = emptyList()
@@ -45,11 +48,18 @@ class PhotoGridAdapter(
             if (devicePhoto != null) {
                 updateRawBadge(devicePhoto)
                 updateFavoriteBadge(devicePhoto)
+                updateSelectionOverlay(devicePhoto.id, isSelectionMode(), isPhotoSelected)
             }
             
-            // Set click listener
+            // Set click listener - pass to handler
             binding.root.setOnClickListener {
                 onPhotoClick(position)
+            }
+            
+            // Set long click listener to enter selection mode
+            binding.root.setOnLongClickListener {
+                onPhotoLongClick(position)
+                true
             }
         }
         
@@ -60,6 +70,22 @@ class PhotoGridAdapter(
         
         private fun updateFavoriteBadge(devicePhoto: DevicePhoto) {
             binding.favoriteBadge.visibility = if (devicePhoto.isFavorite) android.view.View.VISIBLE else android.view.View.GONE
+        }
+        
+        private fun updateSelectionOverlay(photoId: Long, selectionMode: Boolean, isSelected: (Long) -> Boolean) {
+            val selected = isSelected(photoId)
+            // Only show overlay if in selection mode
+            if (selectionMode) {
+                binding.selectionCheckmark.visibility = if (selected) android.view.View.VISIBLE else android.view.View.GONE
+            } else {
+                binding.selectionCheckmark.visibility = android.view.View.GONE
+            }
+            // Add semi-transparent overlay when in selection mode
+            if (selectionMode) {
+                binding.photoImage.alpha = if (selected) 0.7f else 1.0f
+            } else {
+                binding.photoImage.alpha = 1.0f
+            }
         }
         
         private fun setPlaceholderBackground() {
