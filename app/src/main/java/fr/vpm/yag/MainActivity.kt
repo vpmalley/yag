@@ -8,13 +8,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import fr.vpm.yag.databinding.ActivityMainBinding
+import fr.vpm.yag.ui.home.DeviceAlbumViewModel
 import fr.vpm.yag.ui.settings.ListFolderViewModel
 import fr.vpm.yag.ui.settings.SettingsViewModel
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -26,6 +29,7 @@ class MainActivity : AppCompatActivity() {
     fun getListFolderViewModelFactory() = ListFolderViewModel.Factory(yagDataStore)
 
     private val settingsViewModel: SettingsViewModel by viewModels { getSettingsViewModelFactory() }
+    private val deviceAlbumViewModel: DeviceAlbumViewModel by viewModels()
 
     fun setToolbarVisibility(visible: Boolean) {
         binding.toolbar.visibility = if (visible) View.VISIBLE else View.GONE
@@ -61,5 +65,14 @@ class MainActivity : AppCompatActivity() {
         )
         binding.toolbar.setupWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+        
+        // Scan device for photos at app startup
+        scanDeviceAlbums()
+    }
+
+    private fun scanDeviceAlbums() {
+        lifecycleScope.launch {
+            deviceAlbumViewModel.fetchDeviceAlbums(applicationContext)
+        }
     }
 }
