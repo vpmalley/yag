@@ -7,7 +7,10 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.LayoutInflater
+import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -24,10 +27,11 @@ import fr.vpm.yag.device.model.Album
 import fr.vpm.yag.device.model.DevicePhoto
 import fr.vpm.yag.device.model.Photo
 import fr.vpm.yag.device.model.isRawPhoto
-import fr.vpm.yag.ui.dashboard.ColumnCountGestureListener
 import fr.vpm.yag.ui.dashboard.GridSpacingItemDecoration
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
 import java.io.File
+import kotlin.math.max
+import kotlin.math.min
 
 class AlbumDetailFragment : Fragment() {
 
@@ -47,6 +51,15 @@ class AlbumDetailFragment : Fragment() {
     private var isHeaderCollapsed = false
     private var totalScrollY = 0
     private val scrollThreshold = 20 // pixels to scroll before collapsing
+    
+    // Swipe-to-select state
+    private var isDraggingForSelection = false
+    private var lastSelectedPosition = -1
+    private var initialTouchX = 0f
+    private var initialTouchY = 0f
+    
+    // Gesture detectors
+    private lateinit var scaleGestureDetector: ScaleGestureDetector
 
     // Receive album ID as argument
     private val args: AlbumDetailFragmentArgs by navArgs()
@@ -63,6 +76,30 @@ class AlbumDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val activity = requireActivity() as? MainActivity
+        activity?.let { ctx ->
+            // Setup pinch-to-zoom
+            scaleGestureDetector = ScaleGestureDetector(
+                ctx,
+                object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+                    override fun onScale(detector: ScaleGestureDetector): Boolean {
+                        val scaleFactor = detector.scaleFactor
+                        // Invert scale: pinch out (zoom in) = decrease columns, pinch in (zoom out) = increase columns
+                        if (scaleFactor > 1.01f) {
+                            // Zoom out gesture (pinch in) - increase columns
+                            columnCount = kotlin.math.min(columnCount + 1, 6)
+                            updateGridLayout()
+                        } else if (scaleFactor < 0.99f) {
+                            // Zoom in gesture (pinch out) - decrease columns
+                            columnCount = kotlin.math.max(columnCount - 1, 1)
+                            updateGridLayout()
+                        }
+                        return true
+                    }
+                }
+            )
+        }
+
         val albumId = args.albumId
         val album = findAlbumById(albumId)
 
@@ -76,7 +113,6 @@ class AlbumDetailFragment : Fragment() {
             
             setupAlbumHeader(album)
             setupRecyclerView()
-            setupPinchToZoom()
             setupActionButtons()
             // Reset scroll state when album changes
             resetScrollState()
@@ -124,6 +160,9 @@ class AlbumDetailFragment : Fragment() {
             GridSpacingItemDecoration(requireContext(), columnCount, 1)
         )
         
+        // Set up touch listener for pinch-to-zoom (always active)
+        setupPinchToZoom(recyclerView)
+        
         // Set up scroll listener to collapse/expand header
         setupHeaderScrollListener(recyclerView)
         
@@ -141,6 +180,62 @@ class AlbumDetailFragment : Fragment() {
         // Observe selection mode changes
         albumDetailViewModel.isSelectionMode.observe(viewLifecycleOwner) { isSelectionMode ->
             updateSelectionModeUI(isSelectionMode)
+        }
+    }
+
+    private fun setupPinchToZoom(recyclerView: RecyclerView) {
+        val touchSlop = ViewConfiguration.get(requireContext()).scaledTouchSlop
+        
+        recyclerView.setOnTouchListener { _, event ->
+            // Let ScaleGestureDetector handle pinch gestures
+            val scaleHandled = scaleGestureDetector.onTouchEvent(event)
+            
+            // If we're in selection mode, handle drag selection
+            if (albumDetailViewModel.isSelectionModeActive()) {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        isDraggingForSelection = false
+                        initialTouchX = event.x
+                        initialTouchY = event.y
+                        lastSelectedPosition = -1
+                        // Don't consume - let children handle taps
+                        false
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = Math.abs(event.x - initialTouchX)
+                        val dy = Math.abs(event.y - initialTouchY)
+                        val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
+                        
+                        // If user moved significantly, start drag selection
+                        if (distance > touchSlop) {
+                            isDraggingForSelection = true
+                            val view = recyclerView.findChildViewUnder(event.x, event.y)
+                            if (view != null) {
+                                val position = recyclerView.getChildAdapterPosition(view)
+                                if (position != RecyclerView.NO_POSITION && position != lastSelectedPosition) {
+                                    lastSelectedPosition = position
+                                    val photos = albumDetailViewModel.getDisplayPhotos()
+                                    if (position < photos.size) {
+                                        val photo = photos[position] as? DevicePhoto
+                                        photo?.id?.let { photoId ->
+                                            albumDetailViewModel.selectPhoto(photoId)
+                                        }
+                                    }
+                                }
+                            }
+                            // Consume to prevent scrolling during drag selection
+                            true
+                        } else {
+                            // Not moved enough - let children handle it
+                            false
+                        }
+                    }
+                    else -> false
+                }
+            } else {
+                // Not in selection mode - only handle pinch
+                scaleHandled
+            }
         }
     }
 
@@ -250,24 +345,7 @@ class AlbumDetailFragment : Fragment() {
         binding.selectionCountText.text = "$selectedCount selected"
     }
 
-    private fun setupPinchToZoom() {
-        val scaleGestureDetector = ColumnCountGestureListener.create(
-            context = requireContext(),
-            minColumns = 1,
-            maxColumns = 6,
-            initialColumns = columnCount,
-            onColumnCountChanged = { newColumns ->
-                columnCount = newColumns
-                updateGridLayout()
-            }
-        )
 
-        binding.recyclerViewPhotos.setOnTouchListener { _, event ->
-            scaleGestureDetector.onTouchEvent(event)
-            // Also allow RecyclerView to handle touch events for scrolling
-            false
-        }
-    }
 
     private fun setupActionButtons() {
         binding.filterButton.setOnClickListener {

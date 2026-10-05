@@ -56,7 +56,7 @@ class PhotoGridAdapter(
                 onPhotoClick(position)
             }
             
-            // Set long click listener to enter selection mode
+            // Set long click listener for selection mode
             binding.root.setOnLongClickListener {
                 onPhotoLongClick(position)
                 true
