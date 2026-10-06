@@ -7,10 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.LayoutInflater
-import android.view.MotionEvent
-import android.view.ScaleGestureDetector
 import android.view.View
-import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -52,16 +49,14 @@ class AlbumDetailFragment : Fragment() {
     private var isHeaderCollapsed = false
     private var totalScrollY = 0
     private val scrollThreshold = 20 // pixels to scroll before collapsing
-    
-    // Touch state
-    private var isDraggingForSelection = false
-    private var lastSelectedPosition = -1
-    private var initialTouchX = 0f
-    private var initialTouchY = 0f
-    private var downTime = 0L
-    
-    // Gesture detectors
-    private lateinit var scaleGestureDetector: ScaleGestureDetector
+
+    private lateinit var photoGridAdapter: PhotoGridAdapter
+    private var gridSpacingDecoration: GridSpacingItemDecoration? = null
+
+    // Long-press then drag to select a range of photos
+    private lateinit var dragSelectTouchListener: DragSelectTouchListener
+    // Selection when the drag started, so dragging back over photos un-selects only the ones added by the drag
+    private var selectionBeforeDrag: Set<Long> = emptySet()
 
     // Receive album ID as argument
     private val args: AlbumDetailFragmentArgs by navArgs()
@@ -77,30 +72,6 @@ class AlbumDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        val activity = requireActivity() as? MainActivity
-        activity?.let { ctx ->
-            // Setup pinch-to-zoom
-            scaleGestureDetector = ScaleGestureDetector(
-                ctx,
-                object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-                    override fun onScale(detector: ScaleGestureDetector): Boolean {
-                        val scaleFactor = detector.scaleFactor
-                        // Invert scale: pinch out (zoom in) = decrease columns, pinch in (zoom out) = increase columns
-                        if (scaleFactor > 1.01f) {
-                            // Zoom out gesture (pinch in) - increase columns
-                            columnCount = kotlin.math.min(columnCount + 1, 6)
-                            updateGridLayout()
-                        } else if (scaleFactor < 0.99f) {
-                            // Zoom in gesture (pinch out) - decrease columns
-                            columnCount = kotlin.math.max(columnCount - 1, 1)
-                            updateGridLayout()
-                        }
-                        return true
-                    }
-                }
-            )
-        }
 
         val albumId = args.albumId
         val album = findAlbumById(albumId)
@@ -162,7 +133,7 @@ class AlbumDetailFragment : Fragment() {
     private fun setupRecyclerView() {
         val recyclerView = binding.recyclerViewPhotos
 
-        val adapter = PhotoGridAdapter(
+        photoGridAdapter = PhotoGridAdapter(
             onPhotoClick = { position ->
                 handlePhotoClick(position)
             },
@@ -178,25 +149,40 @@ class AlbumDetailFragment : Fragment() {
         }
         
         recyclerView.layoutManager = GridLayoutManager(requireContext(), columnCount)
-        recyclerView.adapter = adapter
-        recyclerView.addItemDecoration(
-            GridSpacingItemDecoration(requireContext(), columnCount, 1)
+        recyclerView.adapter = photoGridAdapter
+        updateGridSpacing()
+        
+        // Pinch to change the column count (only kicks in with two fingers)
+        recyclerView.addOnItemTouchListener(
+            PinchToResizeTouchListener(
+                requireContext(),
+                minColumns = MIN_COLUMNS,
+                maxColumns = MAX_COLUMNS,
+                getColumnCount = { columnCount },
+                onColumnCountChanged = { newCount ->
+                    columnCount = newCount
+                    updateGridLayout()
+                }
+            )
         )
         
-        // Set up touch listener for pinch-to-zoom (always active)
-        setupPinchToZoom(recyclerView)
+        // Long-press then drag to select a range of photos
+        dragSelectTouchListener = DragSelectTouchListener(recyclerView) { anchor, current ->
+            selectRange(anchor, current)
+        }
+        recyclerView.addOnItemTouchListener(dragSelectTouchListener)
         
         // Set up scroll listener to collapse/expand header
         setupHeaderScrollListener(recyclerView)
         
         // Observe changes to display photos and update adapter
         albumDetailViewModel.displayPhotos.observe(viewLifecycleOwner) { photos ->
-            adapter.submitList(photos)
+            photoGridAdapter.submitList(photos)
         }
         
-        // Observe selection state changes to refresh adapter
+        // Observe selection state changes to refresh the selection overlays
         albumDetailViewModel.selectedPhotoIds.observe(viewLifecycleOwner) { _ ->
-            adapter.notifyDataSetChanged()
+            photoGridAdapter.notifySelectionChanged()
             updateSelectionCountText()
         }
         
@@ -206,89 +192,12 @@ class AlbumDetailFragment : Fragment() {
         }
     }
 
-    private fun setupPinchToZoom(recyclerView: RecyclerView) {
-        val touchSlop = ViewConfiguration.get(requireContext()).scaledTouchSlop
-        
-        recyclerView.setOnTouchListener { _, event ->
-            // Let ScaleGestureDetector handle pinch gestures
-            val scaleHandled = scaleGestureDetector.onTouchEvent(event)
-            if (scaleHandled) {
-                return@setOnTouchListener true
-            }
-            
-            // Handle touch events for selection mode drag and photo taps/long-presses
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    // Check if we're over a photo
-                    val view = recyclerView.findChildViewUnder(event.x, event.y)
-                    if (view != null) {
-                        initialTouchX = event.x
-                        initialTouchY = event.y
-                        lastSelectedPosition = recyclerView.getChildAdapterPosition(view)
-                        downTime = event.eventTime
-                    } else {
-                        lastSelectedPosition = -1
-                        downTime = 0L
-                    }
-                    false
-                }
-                
-                MotionEvent.ACTION_MOVE -> {
-                    if (lastSelectedPosition != -1) {
-                        val dx = Math.abs(event.x - initialTouchX)
-                        val dy = Math.abs(event.y - initialTouchY)
-                        val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
-                        
-                        if (albumDetailViewModel.isSelectionModeActive() && distance > touchSlop) {
-                            // Drag selection
-                            isDraggingForSelection = true
-                            val view = recyclerView.findChildViewUnder(event.x, event.y)
-                            if (view != null) {
-                                val position = recyclerView.getChildAdapterPosition(view)
-                                if (position != RecyclerView.NO_POSITION && position != lastSelectedPosition) {
-                                    lastSelectedPosition = position
-                                    val photos = albumDetailViewModel.getDisplayPhotos()
-                                    if (position < photos.size) {
-                                        val photo = photos[position] as? DevicePhoto
-                                        photo?.id?.let { photoId ->
-                                            albumDetailViewModel.selectPhoto(photoId)
-                                        }
-                                    }
-                                }
-                            }
-                            true
-                        }
-                        // Allow RecyclerView to handle scrolling
-                        false
-                    } else {
-                        false
-                    }
-                }
-                
-                MotionEvent.ACTION_UP -> {
-                    if (lastSelectedPosition != -1 && downTime > 0L) {
-                        val dx = Math.abs(event.x - initialTouchX)
-                        val dy = Math.abs(event.y - initialTouchY)
-                        val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
-                        
-                        if (distance <= touchSlop) {
-                            val pressDuration = event.eventTime - downTime
-                            if (pressDuration >= 500) {
-                                handlePhotoLongClick(lastSelectedPosition)
-                            } else {
-                                handlePhotoClick(lastSelectedPosition)
-                            }
-                        }
-                    }
-                    lastSelectedPosition = -1
-                    downTime = 0L
-                    isDraggingForSelection = false
-                    false
-                }
-                
-                else -> false
-            }
+    private fun selectRange(fromPosition: Int, toPosition: Int) {
+        val photos = albumDetailViewModel.getDisplayPhotos()
+        val rangeIds = (min(fromPosition, toPosition)..max(fromPosition, toPosition)).mapNotNull { position ->
+            (photos.getOrNull(position) as? DevicePhoto)?.id
         }
+        albumDetailViewModel.setSelectedPhotos(selectionBeforeDrag + rangeIds)
     }
 
     private fun setupHeaderScrollListener(recyclerView: RecyclerView) {
@@ -373,6 +282,10 @@ class AlbumDetailFragment : Fragment() {
             // Enter selection mode and select this photo
             albumDetailViewModel.setSelectionMode(true)
             albumDetailViewModel.selectPhoto(photo.id)
+            
+            // Keep following the finger to select every photo it drags over
+            selectionBeforeDrag = albumDetailViewModel.selectedPhotoIds.value ?: emptySet()
+            dragSelectTouchListener.startDragSelection(position)
         }
     }
 
@@ -656,18 +569,17 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun updateGridLayout() {
-        binding.recyclerViewPhotos.layoutManager = GridLayoutManager(requireContext(), columnCount)
-        // Remove existing decorations before adding new one
-        while (binding.recyclerViewPhotos.itemDecorationCount > 0) {
-            binding.recyclerViewPhotos.removeItemDecorationAt(0)
+        // Changing the span count in place keeps the scroll position
+        (binding.recyclerViewPhotos.layoutManager as? GridLayoutManager)?.spanCount = columnCount
+        updateGridSpacing()
+    }
+
+    private fun updateGridSpacing() {
+        val recyclerView = binding.recyclerViewPhotos
+        gridSpacingDecoration?.let { recyclerView.removeItemDecoration(it) }
+        gridSpacingDecoration = GridSpacingItemDecoration(requireContext(), columnCount, 1).also {
+            recyclerView.addItemDecoration(it)
         }
-        binding.recyclerViewPhotos.addItemDecoration(
-            GridSpacingItemDecoration(
-                requireContext(),
-                columnCount,
-                1
-            )
-        )
     }
 
     override fun onDestroyView() {
@@ -678,5 +590,10 @@ class AlbumDetailFragment : Fragment() {
         val activity = requireActivity() as? MainActivity
         activity?.setToolbarTitle(null)
         _binding = null
+    }
+
+    companion object {
+        private const val MIN_COLUMNS = 1
+        private const val MAX_COLUMNS = 6
     }
 }

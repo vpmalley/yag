@@ -251,6 +251,13 @@ class AlbumDetailViewModel : ViewModel() {
     }
 
     /**
+     * Replace the whole selection
+     */
+    fun setSelectedPhotos(photoIds: Set<Long>) {
+        _selectedPhotoIds.value = photoIds
+    }
+
+    /**
      * Deselect a photo by its ID
      */
     fun deselectPhoto(photoId: Long) {

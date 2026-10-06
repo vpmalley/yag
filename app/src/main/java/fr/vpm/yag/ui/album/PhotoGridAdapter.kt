@@ -24,7 +24,7 @@ class PhotoGridAdapter(
     inner class PhotoViewHolder(private val binding: ItemPhotoGridBinding) : 
         RecyclerView.ViewHolder(binding.root) {
         
-        fun bind(photo: Photo, position: Int) {
+        fun bind(photo: Photo) {
             val devicePhoto = photo as? DevicePhoto
             val uri = devicePhoto?.uri
             
@@ -53,14 +53,25 @@ class PhotoGridAdapter(
             
             // Set click listener - pass to handler
             binding.root.setOnClickListener {
-                onPhotoClick(position)
+                val position = bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onPhotoClick(position)
+                }
             }
             
             // Set long click listener for selection mode
             binding.root.setOnLongClickListener {
-                onPhotoLongClick(position)
+                val position = bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    onPhotoLongClick(position)
+                }
                 true
             }
+        }
+        
+        fun bindSelection(photo: Photo) {
+            val devicePhoto = photo as? DevicePhoto ?: return
+            updateSelectionOverlay(devicePhoto.id, isSelectionMode(), isPhotoSelected)
         }
         
         private fun updateRawBadge(devicePhoto: DevicePhoto) {
@@ -107,7 +118,16 @@ class PhotoGridAdapter(
     }
 
     override fun onBindViewHolder(holder: PhotoViewHolder, position: Int) {
-        holder.bind(photos[position], position)
+        holder.bind(photos[position])
+    }
+
+    override fun onBindViewHolder(holder: PhotoViewHolder, position: Int, payloads: MutableList<Any>) {
+        if (payloads.contains(PAYLOAD_SELECTION)) {
+            // Only the selection changed - skip reloading the thumbnail
+            holder.bindSelection(photos[position])
+        } else {
+            super.onBindViewHolder(holder, position, payloads)
+        }
     }
 
     override fun getItemCount(): Int = photos.size
@@ -115,5 +135,13 @@ class PhotoGridAdapter(
     fun submitList(newPhotos: List<Photo>) {
         photos = newPhotos
         notifyDataSetChanged()
+    }
+
+    fun notifySelectionChanged() {
+        notifyItemRangeChanged(0, itemCount, PAYLOAD_SELECTION)
+    }
+
+    companion object {
+        private const val PAYLOAD_SELECTION = "selection"
     }
 }
