@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -52,11 +53,12 @@ class AlbumDetailFragment : Fragment() {
     private var totalScrollY = 0
     private val scrollThreshold = 20 // pixels to scroll before collapsing
     
-    // Swipe-to-select state
+    // Touch state
     private var isDraggingForSelection = false
     private var lastSelectedPosition = -1
     private var initialTouchX = 0f
     private var initialTouchY = 0f
+    private var downTime = 0L
     
     // Gesture detectors
     private lateinit var scaleGestureDetector: ScaleGestureDetector
@@ -117,6 +119,27 @@ class AlbumDetailFragment : Fragment() {
             // Reset scroll state when album changes
             resetScrollState()
         }
+        
+        // Setup back press callback to handle back button when in selection mode
+        setupBackPressHandler()
+    }
+
+    private fun setupBackPressHandler() {
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    if (albumDetailViewModel.isSelectionModeActive()) {
+                        // In selection mode - just exit selection mode, don't navigate back
+                        albumDetailViewModel.setSelectionMode(false)
+                    } else {
+                        // Not in selection mode - let default back behavior proceed
+                        isEnabled = false
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                    }
+                }
+            }
+        )
     }
 
     private fun resetScrollState() {
@@ -189,25 +212,35 @@ class AlbumDetailFragment : Fragment() {
         recyclerView.setOnTouchListener { _, event ->
             // Let ScaleGestureDetector handle pinch gestures
             val scaleHandled = scaleGestureDetector.onTouchEvent(event)
+            if (scaleHandled) {
+                return@setOnTouchListener true
+            }
             
-            // If we're in selection mode, handle drag selection
-            if (albumDetailViewModel.isSelectionModeActive()) {
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        isDraggingForSelection = false
+            // Handle touch events for selection mode drag and photo taps/long-presses
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    // Check if we're over a photo
+                    val view = recyclerView.findChildViewUnder(event.x, event.y)
+                    if (view != null) {
                         initialTouchX = event.x
                         initialTouchY = event.y
+                        lastSelectedPosition = recyclerView.getChildAdapterPosition(view)
+                        downTime = event.eventTime
+                    } else {
                         lastSelectedPosition = -1
-                        // Don't consume - let children handle taps
-                        false
+                        downTime = 0L
                     }
-                    MotionEvent.ACTION_MOVE -> {
+                    false
+                }
+                
+                MotionEvent.ACTION_MOVE -> {
+                    if (lastSelectedPosition != -1) {
                         val dx = Math.abs(event.x - initialTouchX)
                         val dy = Math.abs(event.y - initialTouchY)
                         val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
                         
-                        // If user moved significantly, start drag selection
-                        if (distance > touchSlop) {
+                        if (albumDetailViewModel.isSelectionModeActive() && distance > touchSlop) {
+                            // Drag selection
                             isDraggingForSelection = true
                             val view = recyclerView.findChildViewUnder(event.x, event.y)
                             if (view != null) {
@@ -223,18 +256,37 @@ class AlbumDetailFragment : Fragment() {
                                     }
                                 }
                             }
-                            // Consume to prevent scrolling during drag selection
                             true
-                        } else {
-                            // Not moved enough - let children handle it
-                            false
+                        }
+                        // Allow RecyclerView to handle scrolling
+                        false
+                    } else {
+                        false
+                    }
+                }
+                
+                MotionEvent.ACTION_UP -> {
+                    if (lastSelectedPosition != -1 && downTime > 0L) {
+                        val dx = Math.abs(event.x - initialTouchX)
+                        val dy = Math.abs(event.y - initialTouchY)
+                        val distance = Math.sqrt((dx * dx + dy * dy).toDouble())
+                        
+                        if (distance <= touchSlop) {
+                            val pressDuration = event.eventTime - downTime
+                            if (pressDuration >= 500) {
+                                handlePhotoLongClick(lastSelectedPosition)
+                            } else {
+                                handlePhotoClick(lastSelectedPosition)
+                            }
                         }
                     }
-                    else -> false
+                    lastSelectedPosition = -1
+                    downTime = 0L
+                    isDraggingForSelection = false
+                    false
                 }
-            } else {
-                // Not in selection mode - only handle pinch
-                scaleHandled
+                
+                else -> false
             }
         }
     }
