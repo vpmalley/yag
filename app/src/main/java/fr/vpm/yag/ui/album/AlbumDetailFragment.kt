@@ -116,8 +116,14 @@ class AlbumDetailFragment : Fragment() {
     private fun resetScrollState() {
         totalScrollY = 0
         isHeaderCollapsed = false
-        // Ensure header is visible
-        binding.actionButtonsHeader.visibility = View.VISIBLE
+        // Ensure header is visible with animation
+        if (binding.actionButtonsHeader.visibility != View.VISIBLE || binding.actionButtonsHeader.alpha < 1f) {
+            binding.actionButtonsHeader.visibility = View.VISIBLE
+            binding.actionButtonsHeader.animate()
+                .alpha(1f)
+                .setDuration(200)
+                .start()
+        }
     }
 
     private fun findAlbumById(albumId: String): Album? {
@@ -205,6 +211,12 @@ class AlbumDetailFragment : Fragment() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 super.onScrolled(recyclerView, dx, dy)
                 
+                // Don't process scroll events for header when in selection mode
+                // The selection action bar is always visible in selection mode
+                if (albumDetailViewModel.isSelectionModeActive()) {
+                    return
+                }
+                
                 totalScrollY += dy
                 
                 if (dy > 0 && !isHeaderCollapsed) {
@@ -290,18 +302,62 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun updateSelectionModeUI(isSelectionMode: Boolean) {
-        // Show/hide selection-related UI
-        binding.actionButtonsHeader.visibility = if (isSelectionMode) View.GONE else View.VISIBLE
-        binding.selectionActionBar.visibility = if (isSelectionMode) View.VISIBLE else View.GONE
-        
         // Update title to show selection count when in selection mode
         val activity = requireActivity() as? MainActivity
         if (isSelectionMode) {
             updateSelectionCountText()
             activity?.setToolbarTitle("Select photos")
+            // Reset scroll state when entering selection mode
+            // to ensure the header is fully visible when we exit
+            isHeaderCollapsed = false
+            totalScrollY = 0
         } else {
             val album = findAlbumById(args.albumId)
             activity?.setToolbarTitle(album?.name ?: "Unknown Album")
+        }
+        
+        // Animate the transition between action buttons and selection bar
+        val duration = 200L
+        if (isSelectionMode) {
+            // Hide action buttons, show selection bar
+            if (binding.actionButtonsHeader.visibility == View.VISIBLE) {
+                binding.actionButtonsHeader.animate()
+                    .alpha(0f)
+                    .setDuration(duration)
+                    .withEndAction {
+                        binding.actionButtonsHeader.visibility = View.GONE
+                    }
+                    .start()
+            } else {
+                binding.actionButtonsHeader.visibility = View.GONE
+            }
+            
+            binding.selectionActionBar.visibility = View.VISIBLE
+            binding.selectionActionBar.alpha = 0f
+            binding.selectionActionBar.animate()
+                .alpha(1f)
+                .setDuration(duration)
+                .start()
+        } else {
+            // Hide selection bar, show action buttons
+            if (binding.selectionActionBar.visibility == View.VISIBLE) {
+                binding.selectionActionBar.animate()
+                    .alpha(0f)
+                    .setDuration(duration)
+                    .withEndAction {
+                        binding.selectionActionBar.visibility = View.GONE
+                    }
+                    .start()
+            } else {
+                binding.selectionActionBar.visibility = View.GONE
+            }
+            
+            binding.actionButtonsHeader.visibility = View.VISIBLE
+            binding.actionButtonsHeader.alpha = 0f
+            binding.actionButtonsHeader.animate()
+                .alpha(1f)
+                .setDuration(duration)
+                .start()
         }
     }
 
