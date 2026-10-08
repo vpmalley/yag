@@ -6,109 +6,114 @@
     android:layout_height="match_parent"
     tools:context=".ui.album.AlbumDetailFragment">
 
-    <!-- Selection action bar (shown when in selection mode) -->
-    <LinearLayout
-        android:id="@+id/selectionActionBar"
+    <!-- Header container that holds either action buttons or selection bar -->
+    <FrameLayout
+        android:id="@+id/headerContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:background="?attr/colorSurface"
-        android:padding="8dp"
-        android:visibility="gone"
         android:animateLayoutChanges="true"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <ImageButton
-            android:id="@+id/selectAllButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Select all"
-            android:gravity="center_vertical"
+        <!-- Action buttons header (shown when not in selection mode) -->
+        <LinearLayout
+            android:id="@+id/actionButtonsHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/colorSurface"
+            android:orientation="horizontal"
             android:padding="8dp"
-            android:src="@drawable/ic_check_circle"
-            app:tint="?attr/colorOnSurface" />
+            android:visibility="visible">
 
-        <TextView
-            android:id="@+id/selectionCountText"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:gravity="center_vertical"
-            android:text="0 selected"
-            android:textSize="16sp"
-            android:layout_marginStart="16dp"
-            android:textColor="?attr/colorOnSurface" />
+            <ImageButton
+                android:id="@+id/filterButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Filter"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:src="@drawable/ic_filter_white_24"
+                app:tint="?attr/colorOnSurface" />
 
-        <ImageButton
-            android:id="@+id/shareSelectedButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Share selected"
-            android:gravity="center_vertical"
+            <ImageButton
+                android:id="@+id/shareButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Share"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:src="@drawable/ic_share_white_24"
+                app:tint="?attr/colorOnSurface" />
+
+            <ImageButton
+                android:id="@+id/deleteButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Delete"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:src="@drawable/ic_delete"
+                app:tint="?attr/colorOnSurface" />
+        </LinearLayout>
+
+        <!-- Selection action bar (shown when in selection mode) -->
+        <LinearLayout
+            android:id="@+id/selectionActionBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/colorSurface"
+            android:orientation="horizontal"
             android:padding="8dp"
-            android:src="@drawable/ic_share_white_24"
-            app:tint="?attr/colorOnSurface" />
+            android:visibility="gone">
 
-        <ImageButton
-            android:id="@+id/cancelSelectionButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Cancel"
-            android:gravity="center_vertical"
-            android:padding="8dp"
-            android:src="@drawable/ic_delete"
-            app:tint="?attr/colorOnSurface" />
-    </LinearLayout>
+            <ImageButton
+                android:id="@+id/selectAllButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Select all"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:src="@drawable/ic_check_circle"
+                app:tint="?attr/colorOnSurface" />
 
-    <!-- Action buttons header that can collapse -->
-    <LinearLayout
-        android:id="@+id/actionButtonsHeader"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:animateLayoutChanges="true"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+            <ImageButton
+                android:id="@+id/shareSelectedButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Share selected"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:src="@drawable/ic_share_white_24"
+                app:tint="?attr/colorOnSurface" />
 
-        <ImageButton
-            android:id="@+id/filterButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Filter"
-            android:gravity="center_vertical"
-            android:padding="8dp"
-            android:src="@drawable/ic_filter_white_24"
-            app:tint="?attr/colorOnSurface" />
+            <ImageButton
+                android:id="@+id/cancelSelectionButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Cancel"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:src="@drawable/ic_delete"
+                app:tint="?attr/colorOnSurface" />
 
-        <ImageButton
-            android:id="@+id/shareButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Share"
-            android:gravity="center_vertical"
-            android:padding="8dp"
-            android:src="@drawable/ic_share_white_24"
-            app:tint="?attr/colorOnSurface" />
-
-        <ImageButton
-            android:id="@+id/deleteButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Delete"
-            android:gravity="center_vertical"
-            android:padding="8dp"
-            android:src="@drawable/ic_delete"
-            app:tint="?attr/colorOnSurface" />
-    </LinearLayout>
+            <TextView
+                android:id="@+id/selectionCountText"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_marginStart="16dp"
+                android:gravity="center_vertical"
+                android:text="0 selected"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="16sp" />
+        </LinearLayout>
+    </FrameLayout>
 
     <!-- Photo grid RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView
@@ -120,6 +125,6 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/selectionActionBar" />
+        app:layout_constraintTop_toBottomOf="@id/headerContainer" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
