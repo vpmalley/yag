@@ -273,7 +273,7 @@ class AlbumDetailFragment : Fragment() {
         val action = AlbumDetailFragmentDirections.actionAlbumDetailFragmentToPhotoViewerFragment(
             albumId,
             photoPosition,
-            albumDetailViewModel.isFilterEnabled()
+            albumDetailViewModel.getFilterMode().ordinal
         )
         findNavController().navigate(action)
     }

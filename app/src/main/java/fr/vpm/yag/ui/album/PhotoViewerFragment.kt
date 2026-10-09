@@ -79,20 +79,14 @@ class PhotoViewerFragment : Fragment() {
 
         val albumId = args.albumId
         val initialPosition = args.photoPosition
-        val filterEnabled = args.filterEnabled
-
-        // Sync filter state with ViewModel (map boolean to new filter mode)
-        val initialFilterMode = if (filterEnabled) {
-            AlbumDetailViewModel.FilterMode.NO_RAW
-        } else {
-            AlbumDetailViewModel.FilterMode.NONE
-        }
-        albumDetailViewModel.setFilterMode(initialFilterMode)
+        val filterModeOrdinal = args.filterMode
+        val initialFilterMode = AlbumDetailViewModel.FilterMode.values().getOrNull(filterModeOrdinal) ?: AlbumDetailViewModel.FilterMode.NONE
 
         val album = findAlbumById(albumId)
 
         if (album != null) {
             // Set the album in the ViewModel if not already set
+            // Only set the filter mode when first loading the album
             if (albumDetailViewModel.getAlbumId() != albumId) {
                 albumDetailViewModel.setAlbum(album)
                 albumDetailViewModel.setFilterMode(initialFilterMode)
