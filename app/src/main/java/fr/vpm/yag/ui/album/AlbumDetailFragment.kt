@@ -236,6 +236,13 @@ class AlbumDetailFragment : Fragment() {
                 if (totalScrollY < 0) {
                     totalScrollY = 0
                 }
+                
+                // Also check if we can scroll up no more (at the top)
+                if (!recyclerView.canScrollVertically(-1) && isHeaderCollapsed) {
+                    expandHeader()
+                    isHeaderCollapsed = false
+                    totalScrollY = 0
+                }
             }
         })
     }
