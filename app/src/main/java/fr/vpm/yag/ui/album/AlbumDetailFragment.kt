@@ -48,7 +48,8 @@ class AlbumDetailFragment : Fragment() {
     // Header collapse state
     private var isHeaderCollapsed = false
     private var totalScrollY = 0
-    private val scrollThreshold = 20 // pixels to scroll before collapsing
+    private val collapseThreshold = 20 // pixels to scroll before collapsing
+    private val expandThreshold = 10 // pixels from top before expanding
 
     private lateinit var photoGridAdapter: PhotoGridAdapter
     private var gridSpacingDecoration: GridSpacingItemDecoration? = null
@@ -217,24 +218,23 @@ class AlbumDetailFragment : Fragment() {
                     return
                 }
                 
+                // Track scroll position
                 totalScrollY += dy
                 
-                if (dy > 0 && !isHeaderCollapsed) {
-                    // Scrolling down - accumulate scroll distance
-                    if (totalScrollY > scrollThreshold) {
-                        collapseHeader()
-                        isHeaderCollapsed = true
-                    }
-                } else if (dy < 0 && isHeaderCollapsed) {
-                    // Scrolling up - immediately expand
-                    expandHeader()
-                    isHeaderCollapsed = false
+                // Clamp scroll position
+                if (totalScrollY < 0) {
                     totalScrollY = 0
                 }
                 
-                // Reset if we're at the top
-                if (totalScrollY < 0) {
-                    totalScrollY = 0
+                // Collapse when scrolled down past threshold
+                if (!isHeaderCollapsed && totalScrollY > collapseThreshold) {
+                    collapseHeader()
+                    isHeaderCollapsed = true
+                }
+                // Expand when scrolled back up near top (with hysteresis)
+                else if (isHeaderCollapsed && totalScrollY < expandThreshold) {
+                    expandHeader()
+                    isHeaderCollapsed = false
                 }
                 
                 // Also check if we can scroll up no more (at the top)
