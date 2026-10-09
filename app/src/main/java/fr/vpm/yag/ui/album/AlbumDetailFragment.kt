@@ -82,12 +82,12 @@ class AlbumDetailFragment : Fragment() {
             albumDetailViewModel.setAlbum(album)
             
             // Sync filter state if coming from PhotoViewer
-            val currentFilterState = albumDetailViewModel.isFilterEnabled()
-            albumDetailViewModel.setFilterEnabled(currentFilterState)
+            val currentFilterMode = albumDetailViewModel.getFilterMode()
+            albumDetailViewModel.setFilterMode(currentFilterMode)
             
             setupAlbumHeader(album)
             setupRecyclerView()
-            setupActionButtons()
+            setupFilterChips()
             // Reset scroll state when album changes
             resetScrollState()
         }
@@ -118,9 +118,9 @@ class AlbumDetailFragment : Fragment() {
         totalScrollY = 0
         isHeaderCollapsed = false
         // Ensure header is visible with animation
-        if (binding.actionButtonsHeader.visibility != View.VISIBLE || binding.actionButtonsHeader.alpha < 1f) {
-            binding.actionButtonsHeader.visibility = View.VISIBLE
-            binding.actionButtonsHeader.animate()
+        if (binding.filterChipsGroup.visibility != View.VISIBLE || binding.filterChipsGroup.alpha < 1f) {
+            binding.filterChipsGroup.visibility = View.VISIBLE
+            binding.filterChipsGroup.animate()
                 .alpha(1f)
                 .setDuration(200)
                 .start()
@@ -248,18 +248,18 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun collapseHeader() {
-        binding.actionButtonsHeader.animate()
+        binding.filterChipsGroup.animate()
             .alpha(0f)
             .setDuration(200)
             .withEndAction {
-                binding.actionButtonsHeader.visibility = View.GONE
+                binding.filterChipsGroup.visibility = View.GONE
             }
             .start()
     }
 
     private fun expandHeader() {
-        binding.actionButtonsHeader.visibility = View.VISIBLE
-        binding.actionButtonsHeader.animate()
+        binding.filterChipsGroup.visibility = View.VISIBLE
+        binding.filterChipsGroup.animate()
             .alpha(1f)
             .setDuration(200)
             .start()
@@ -323,20 +323,20 @@ class AlbumDetailFragment : Fragment() {
             activity?.setToolbarTitle(album?.name ?: "Unknown Album")
         }
         
-        // Animate the transition between action buttons and selection bar
+        // Animate the transition between filter chips and selection bar
         val duration = 200L
         if (isSelectionMode) {
-            // Hide action buttons, show selection bar
-            if (binding.actionButtonsHeader.visibility == View.VISIBLE) {
-                binding.actionButtonsHeader.animate()
+            // Hide filter chips, show selection bar
+            if (binding.filterChipsGroup.visibility == View.VISIBLE) {
+                binding.filterChipsGroup.animate()
                     .alpha(0f)
                     .setDuration(duration)
                     .withEndAction {
-                        binding.actionButtonsHeader.visibility = View.GONE
+                        binding.filterChipsGroup.visibility = View.GONE
                     }
                     .start()
             } else {
-                binding.actionButtonsHeader.visibility = View.GONE
+                binding.filterChipsGroup.visibility = View.GONE
             }
             
             binding.selectionActionBar.visibility = View.VISIBLE
@@ -346,7 +346,7 @@ class AlbumDetailFragment : Fragment() {
                 .setDuration(duration)
                 .start()
         } else {
-            // Hide selection bar, show action buttons
+            // Hide selection bar, show filter chips
             if (binding.selectionActionBar.visibility == View.VISIBLE) {
                 binding.selectionActionBar.animate()
                     .alpha(0f)
@@ -359,9 +359,9 @@ class AlbumDetailFragment : Fragment() {
                 binding.selectionActionBar.visibility = View.GONE
             }
             
-            binding.actionButtonsHeader.visibility = View.VISIBLE
-            binding.actionButtonsHeader.alpha = 0f
-            binding.actionButtonsHeader.animate()
+            binding.filterChipsGroup.visibility = View.VISIBLE
+            binding.filterChipsGroup.alpha = 0f
+            binding.filterChipsGroup.animate()
                 .alpha(1f)
                 .setDuration(duration)
                 .start()
@@ -375,17 +375,44 @@ class AlbumDetailFragment : Fragment() {
 
 
 
-    private fun setupActionButtons() {
-        binding.filterButton.setOnClickListener {
-            toggleRawFilter()
+    private fun setupFilterChips() {
+        // Setup filter chip click listeners
+        binding.noRawChip.setOnClickListener {
+            val currentMode = albumDetailViewModel.getFilterMode()
+            val newMode = if (currentMode == AlbumDetailViewModel.FilterMode.NO_RAW) {
+                AlbumDetailViewModel.FilterMode.NONE
+            } else {
+                AlbumDetailViewModel.FilterMode.NO_RAW
+            }
+            setFilterMode(newMode)
         }
 
-        binding.shareButton.setOnClickListener {
-            showShareOptionsBottomSheet()
+        binding.favesChip.setOnClickListener {
+            val currentMode = albumDetailViewModel.getFilterMode()
+            val newMode = if (currentMode == AlbumDetailViewModel.FilterMode.FAVOURITES_ONLY) {
+                AlbumDetailViewModel.FilterMode.NONE
+            } else {
+                AlbumDetailViewModel.FilterMode.FAVOURITES_ONLY
+            }
+            setFilterMode(newMode)
         }
 
-        binding.deleteButton.setOnClickListener {
-            showDeleteOptionsBottomSheet()
+        binding.favesWithRawChip.setOnClickListener {
+            val currentMode = albumDetailViewModel.getFilterMode()
+            val newMode = if (currentMode == AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW) {
+                AlbumDetailViewModel.FilterMode.NONE
+            } else {
+                AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW
+            }
+            setFilterMode(newMode)
+        }
+
+        // Initialize chip selection state based on current filter mode
+        updateFilterChipSelection()
+
+        // Observe filter mode changes to update chip selection
+        albumDetailViewModel.filterMode.observe(viewLifecycleOwner) {
+            updateFilterChipSelection()
         }
 
         // Setup selection action bar
@@ -619,6 +646,27 @@ class AlbumDetailFragment : Fragment() {
         }
         
         startActivity(Intent.createChooser(shareIntent, "Share Photos"))
+    }
+
+    private fun setFilterMode(mode: AlbumDetailViewModel.FilterMode) {
+        albumDetailViewModel.setFilterMode(mode)
+        val message = when (mode) {
+            AlbumDetailViewModel.FilterMode.NO_RAW -> "No RAW filter applied"
+            AlbumDetailViewModel.FilterMode.FAVOURITES_ONLY -> "Favourites only"
+            AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW -> "Favourites + RAW versions"
+            AlbumDetailViewModel.FilterMode.NONE -> "All photos shown"
+        }
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        
+        // Update chip selection state
+        updateFilterChipSelection()
+    }
+
+    private fun updateFilterChipSelection() {
+        val currentMode = albumDetailViewModel.getFilterMode()
+        binding.noRawChip.isChecked = currentMode == AlbumDetailViewModel.FilterMode.NO_RAW
+        binding.favesChip.isChecked = currentMode == AlbumDetailViewModel.FilterMode.FAVOURITES_ONLY
+        binding.favesWithRawChip.isChecked = currentMode == AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW
     }
 
     private fun toggleRawFilter() {

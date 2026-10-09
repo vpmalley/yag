@@ -22,9 +22,16 @@ class AlbumDetailViewModel : ViewModel() {
     private val _displayPhotos = MutableLiveData<List<Photo>>()
     val displayPhotos: LiveData<List<Photo>> = _displayPhotos
 
-    // Filter state
-    private val _isFilterEnabled = MutableLiveData<Boolean>()
-    val isFilterEnabled: LiveData<Boolean> = _isFilterEnabled
+    // Filter mode
+    enum class FilterMode {
+        NONE,           // No filtering - show all photos
+        NO_RAW,        // Filter out RAW photos
+        FAVOURITES_ONLY, // Show only favourite photos
+        FAVOURITES_WITH_RAW  // Show favourite photos + RAW versions that match
+    }
+
+    private val _filterMode = MutableLiveData<FilterMode>()
+    val filterMode: LiveData<FilterMode> = _filterMode
 
     // Sort options
     enum class SortOrder {
@@ -50,7 +57,7 @@ class AlbumDetailViewModel : ViewModel() {
     val isSelectionMode: LiveData<Boolean> = _isSelectionMode
 
     init {
-        _isFilterEnabled.value = false
+        _filterMode.value = FilterMode.NONE
         _sortOrder.value = SortOrder.DATE_NEWEST_FIRST
         _currentPhotoPosition.value = 0
         _selectedPhotoIds.value = emptySet()
@@ -79,19 +86,32 @@ class AlbumDetailViewModel : ViewModel() {
     }
 
     /**
-     * Enable or disable the RAW photo filter
+     * Set the filter mode
      */
-    fun setFilterEnabled(enabled: Boolean) {
-        _isFilterEnabled.value = enabled
+    fun setFilterMode(mode: FilterMode) {
+        _filterMode.value = mode
         updateDisplayPhotos()
     }
 
     /**
-     * Toggle the RAW photo filter
+     * Toggle the filter mode - cycles through available modes
      */
     fun toggleFilter() {
-        _isFilterEnabled.value = _isFilterEnabled.value != true
-        updateDisplayPhotos()
+        val currentMode = _filterMode.value ?: FilterMode.NONE
+        val nextMode = when (currentMode) {
+            FilterMode.NONE -> FilterMode.NO_RAW
+            FilterMode.NO_RAW -> FilterMode.FAVOURITES_ONLY
+            FilterMode.FAVOURITES_ONLY -> FilterMode.FAVOURITES_WITH_RAW
+            FilterMode.FAVOURITES_WITH_RAW -> FilterMode.NONE
+        }
+        setFilterMode(nextMode)
+    }
+
+    /**
+     * Check if any filtering is enabled (legacy method for compatibility)
+     */
+    fun isFilterEnabled(): Boolean {
+        return _filterMode.value != FilterMode.NONE
     }
 
     /**
@@ -114,7 +134,7 @@ class AlbumDetailViewModel : ViewModel() {
      */
     private fun updateDisplayPhotos() {
         val photos = _allPhotos.value ?: emptyList()
-        val filterEnabled = _isFilterEnabled.value ?: false
+        val filterMode = _filterMode.value ?: FilterMode.NONE
         val sortOrder = _sortOrder.value ?: SortOrder.DATE_NEWEST_FIRST
 
         // Apply sorting first
@@ -141,16 +161,50 @@ class AlbumDetailViewModel : ViewModel() {
             }
         }
 
-        // Apply filtering
-        val filteredPhotos = if (filterEnabled) {
-            sortedPhotos.filterNot { photo ->
+        // Apply filtering based on mode
+        val filteredPhotos = when (filterMode) {
+            FilterMode.NONE -> sortedPhotos
+            FilterMode.NO_RAW -> sortedPhotos.filterNot { photo ->
                 photo.isRawPhoto()
             }
-        } else {
-            sortedPhotos
+            FilterMode.FAVOURITES_ONLY -> sortedPhotos.filter { photo ->
+                (photo as? DevicePhoto)?.isFavorite == true
+            }
+            FilterMode.FAVOURITES_WITH_RAW -> {
+                // Get all favourite photos first
+                val favoritePhotos = sortedPhotos.filter { photo ->
+                    (photo as? DevicePhoto)?.isFavorite == true
+                }
+                
+                // Collect base filenames of favorites (without extension)
+                val favoriteBaseNames = favoritePhotos.mapNotNull { photo ->
+                    val devicePhoto = photo as? DevicePhoto
+                    val path = devicePhoto?.path
+                    path?.let { extractBaseFilename(it) }
+                }.toSet()
+                
+                // Include all photos that match the base filenames of favorites
+                sortedPhotos.filter { photo ->
+                    val devicePhoto = photo as? DevicePhoto
+                    val path = devicePhoto?.path
+                    path?.let { filename ->
+                        favoriteBaseNames.contains(extractBaseFilename(filename))
+                    } ?: false
+                }
+            }
         }
 
         _displayPhotos.value = filteredPhotos
+    }
+
+    /**
+     * Extract base filename without extension for matching RAW and JPEG versions
+     */
+    private fun extractBaseFilename(path: String): String {
+        val lastSlashIndex = path.lastIndexOf('/')
+        val filename = if (lastSlashIndex >= 0) path.substring(lastSlashIndex + 1) else path
+        val lastDotIndex = filename.lastIndexOf('.')
+        return if (lastDotIndex > 0) filename.substring(0, lastDotIndex) else filename
     }
 
     /**
@@ -161,10 +215,10 @@ class AlbumDetailViewModel : ViewModel() {
     }
 
     /**
-     * Get filter state (convenience method)
+     * Get current filter mode (convenience method)
      */
-    fun isFilterEnabled(): Boolean {
-        return _isFilterEnabled.value ?: false
+    fun getFilterMode(): FilterMode {
+        return _filterMode.value ?: FilterMode.NONE
     }
 
     /**
