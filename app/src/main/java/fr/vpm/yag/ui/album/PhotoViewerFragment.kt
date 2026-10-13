@@ -12,6 +12,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
@@ -22,6 +23,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.chip.Chip
 import fr.vpm.yag.MainActivity
@@ -57,13 +59,15 @@ class PhotoViewerFragment : Fragment() {
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private var bottomSheetView: View? = null
     private var currentPhotoPosition: Int = 0
-    private var currentPhotoView: View? = null
     private var isBottomSheetExpanded = false
 
     // Parallax effect variables
     private var initialTouchY = 0f
     private var initialImageY = 0f
-    private var isDraggingBottomSheet = false
+    private var initialTouchX = 0f
+    private var isSwipingVertically = false
+    private var swipeDirectionDecided = false
+    private var touchStartedInSwipeUpZone = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -136,9 +140,8 @@ class PhotoViewerFragment : Fragment() {
             onShareClick = { devicePhoto ->
                 sharePhoto(devicePhoto)
             },
-            onPhotoLoaded = { position, photoView ->
-                currentPhotoPosition = position
-                currentPhotoView = photoView
+            onPhotoLoaded = { _, photoView ->
+                // Neighbouring pages are bound too, so this must not touch the "current" state
                 setupPhotoParallax(photoView)
             }
         ).apply {
@@ -148,6 +151,7 @@ class PhotoViewerFragment : Fragment() {
 
         // Set initial position
         viewPager.setCurrentItem(initialPosition, false)
+        currentPhotoPosition = initialPosition
 
         // Observe changes to display photos (in case filter/sort changes)
         albumDetailViewModel.displayPhotos.observe(viewLifecycleOwner) { photos ->
@@ -163,6 +167,19 @@ class PhotoViewerFragment : Fragment() {
                 resetParallaxEffect()
             }
         })
+    }
+
+    private fun updateViewPagerInputEnabled() {
+        // Only allow swiping between photos when the bottom sheet is fully hidden
+        // (not while it is dragged, settling or expanded)
+        binding.viewPager.isUserInputEnabled =
+            !::bottomSheetBehavior.isInitialized || bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN
+    }
+
+    private fun currentPhotoView(): View? {
+        val recyclerView = binding.viewPager.getChildAt(0) as? RecyclerView ?: return null
+        return recyclerView.findViewHolderForAdapterPosition(binding.viewPager.currentItem)
+            ?.itemView?.findViewById(R.id.fullPhoto)
     }
 
     private fun updateFavoriteInMediaStore(devicePhoto: DevicePhoto, isFavorite: Boolean) {
@@ -374,19 +391,8 @@ class PhotoViewerFragment : Fragment() {
                             // Update content when bottom sheet is expanded
                             updateBottomSheetContent(currentPhotoPosition)
                         }
-
-                        BottomSheetBehavior.STATE_DRAGGING -> {
-                            isDraggingBottomSheet = true
-                        }
-
-                        BottomSheetBehavior.STATE_SETTLING -> {
-                            isDraggingBottomSheet = false
-                        }
-
-                        else -> {
-                            isDraggingBottomSheet = false
-                        }
                     }
+                    updateViewPagerInputEnabled()
                 }
 
                 override fun onSlide(bottomSheet: View, slideOffset: Float) {
@@ -419,53 +425,77 @@ class PhotoViewerFragment : Fragment() {
     }
 
     private fun setupPhotoParallax(photoView: View) {
-        photoView.setOnTouchListener { _, event ->
-            when (event.action) {
+        val touchSlop = ViewConfiguration.get(photoView.context).scaledTouchSlop
+        photoView.setOnTouchListener { view, event ->
+            when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    initialTouchY = event.y
-                    initialImageY = photoView.y
+                    // Use raw coordinates: event.y is relative to the view, which moves with the parallax
+                    initialTouchX = event.rawX
+                    initialTouchY = event.rawY
+                    initialImageY = view.y
+                    isSwipingVertically = false
+                    swipeDirectionDecided = false
+
+                    // Swipe up is only allowed from the bottom third, when the sheet is hidden
+                    // and the photo is not zoomed in (otherwise the drag is a pan)
+                    val viewPager = binding.viewPager
+                    val location = intArrayOf(0, 0)
+                    viewPager.getLocationOnScreen(location)
+                    val viewPagerBottom = location[1] + viewPager.height
+                    touchStartedInSwipeUpZone = ::bottomSheetBehavior.isInitialized &&
+                        bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN &&
+                        (view as? ZoomableImageView)?.isZoomed() != true &&
+                        event.rawY > viewPagerBottom - (viewPager.height / 3)
                     false
                 }
 
                 MotionEvent.ACTION_MOVE -> {
-                    val deltaY = event.y - initialTouchY
+                    val deltaX = event.rawX - initialTouchX
+                    val deltaY = event.rawY - initialTouchY
 
-                    // Check if we should start dragging the bottom sheet
-                    if (!isDraggingBottomSheet && !isBottomSheetExpanded &&
-                        deltaY < 0 && ::bottomSheetBehavior.isInitialized &&
-                        bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN
+                    // Decide the direction once, as soon as the finger moved past the touch slop.
+                    // ViewPager2 uses the (larger) paging slop, so we decide before it can intercept.
+                    if (!swipeDirectionDecided && touchStartedInSwipeUpZone &&
+                        (Math.abs(deltaX) > touchSlop || Math.abs(deltaY) > touchSlop)
                     ) {
-
-                        // Only handle swipe up if we're at the bottom of the screen
-                        val viewPager = binding.viewPager
-                        val location = intArrayOf(0, 0)
-                        viewPager.getLocationOnScreen(location)
-                        val touchY = event.rawY
-                        val viewPagerBottom = location[1] + viewPager.height
-
-                        // If touch is in the bottom third of the screen, allow swipe up
-                        if (touchY > viewPagerBottom - (viewPager.height / 3)) {
-                            // Apply parallax effect to the photo
-                            val parallaxFactor = 0.3f
-                            val newY = initialImageY + (deltaY * parallaxFactor)
-                            photoView.y = newY
-
-                            // If swipe up is significant, show the bottom sheet
-                            if (deltaY < -100) {
-                                showBottomSheet()
-                                return@setOnTouchListener true
-                            }
+                        swipeDirectionDecided = true
+                        if (deltaY < 0 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                            isSwipingVertically = true
+                            // Prevent ViewPager2 from stealing the rest of the gesture as a page swipe
+                            view.parent?.requestDisallowInterceptTouchEvent(true)
+                            // Cancel the image's own gesture handling so the release isn't seen as a tap
+                            val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
+                            view.onTouchEvent(cancel)
+                            cancel.recycle()
                         }
                     }
-                    false
+
+                    if (isSwipingVertically) {
+                        // Apply parallax effect to the photo
+                        val parallaxFactor = 0.3f
+                        view.y = initialImageY + (Math.min(deltaY, 0f) * parallaxFactor)
+
+                        // If swipe up is significant, show the bottom sheet
+                        if (deltaY < -100 && bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                            showBottomSheet()
+                        }
+                        true
+                    } else {
+                        false
+                    }
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val consumed = isSwipingVertically
+                    isSwipingVertically = false
+                    swipeDirectionDecided = false
                     // Reset position if bottom sheet wasn't shown
-                    if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
-                        photoView.y = initialImageY
+                    if (::bottomSheetBehavior.isInitialized &&
+                        bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN
+                    ) {
+                        view.y = initialImageY
                     }
-                    false
+                    consumed
                 }
 
                 else -> false
@@ -475,7 +505,7 @@ class PhotoViewerFragment : Fragment() {
 
     private fun applyParallaxEffect(slideOffset: Float) {
         // Apply parallax effect to the current photo view
-        currentPhotoView?.let { photoView ->
+        currentPhotoView()?.let { photoView ->
             // Apply parallax effect: move the photo up as the bottom sheet expands
             val parallaxOffset = slideOffset * 200 // Adjust multiplier for desired effect
             photoView.y = -parallaxOffset
@@ -484,7 +514,7 @@ class PhotoViewerFragment : Fragment() {
 
     private fun resetParallaxEffect() {
         // Reset the current photo view position
-        currentPhotoView?.let { photoView ->
+        currentPhotoView()?.let { photoView ->
             photoView.y = 0f
         }
     }
