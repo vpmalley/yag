@@ -1,5 +1,6 @@
 package fr.vpm.yag.ui.album
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -58,7 +59,7 @@ class AlbumDetailViewModel : ViewModel() {
 
     init {
         _filterMode.value = FilterMode.NONE
-        _sortOrder.value = SortOrder.DATE_NEWEST_FIRST
+        _sortOrder.value = DEFAULT_SORT_ORDER
         _currentPhotoPosition.value = 0
         _selectedPhotoIds.value = emptySet()
         _isSelectionMode.value = false
@@ -135,7 +136,16 @@ class AlbumDetailViewModel : ViewModel() {
     private fun updateDisplayPhotos() {
         val photos = _allPhotos.value ?: emptyList()
         val filterMode = _filterMode.value ?: FilterMode.NONE
-        val sortOrder = _sortOrder.value ?: SortOrder.DATE_NEWEST_FIRST
+        val sortOrder = _sortOrder.value ?: DEFAULT_SORT_ORDER
+
+        android.util.Log.d(
+            "AlbumDetailVM",
+            "Sort order: $sortOrder, Filter: $filterMode, Photo count: ${photos.size}"
+        )
+
+        // Log original display names
+        val originalNames = photos.mapNotNull { (it as? DevicePhoto)?.displayName }
+        android.util.Log.d("AlbumDetailVM", "Original displayNames: $originalNames")
 
         // Apply sorting first
         val sortedPhotos = when (sortOrder) {
@@ -144,22 +154,29 @@ class AlbumDetailViewModel : ViewModel() {
                     (photo as? DevicePhoto)?.additionDate?.time ?: 0L
                 }
             }
+
             SortOrder.DATE_OLDEST_FIRST -> {
                 photos.sortedBy { photo ->
                     (photo as? DevicePhoto)?.additionDate?.time ?: 0L
                 }
             }
+
             SortOrder.NAME_ASCENDING -> {
                 photos.sortedBy { photo ->
-                    (photo as? DevicePhoto)?.path ?: ""
+                    (photo as? DevicePhoto)?.displayName ?: ""
                 }
             }
+
             SortOrder.NAME_DESCENDING -> {
                 photos.sortedByDescending { photo ->
-                    (photo as? DevicePhoto)?.path ?: ""
+                    (photo as? DevicePhoto)?.displayName ?: ""
                 }
             }
         }
+
+        // Log sorted display names
+        val sortedNames = sortedPhotos.mapNotNull { (it as? DevicePhoto)?.displayName }
+        android.util.Log.d("AlbumDetailVM", "Sorted displayNames: $sortedNames")
 
         // Apply filtering based on mode
         val filteredPhotos = when (filterMode) {
@@ -167,22 +184,24 @@ class AlbumDetailViewModel : ViewModel() {
             FilterMode.NO_RAW -> sortedPhotos.filterNot { photo ->
                 photo.isRawPhoto()
             }
+
             FilterMode.FAVOURITES_ONLY -> sortedPhotos.filter { photo ->
                 (photo as? DevicePhoto)?.isFavorite == true
             }
+
             FilterMode.FAVOURITES_WITH_RAW -> {
                 // Get all favourite photos first
                 val favoritePhotos = sortedPhotos.filter { photo ->
                     (photo as? DevicePhoto)?.isFavorite == true
                 }
-                
+
                 // Collect base filenames of favorites (without extension)
                 val favoriteBaseNames = favoritePhotos.mapNotNull { photo ->
                     val devicePhoto = photo as? DevicePhoto
                     val path = devicePhoto?.path
                     path?.let { extractBaseFilename(it) }
                 }.toSet()
-                
+
                 // Include all photos that match the base filenames of favorites
                 sortedPhotos.filter { photo ->
                     val devicePhoto = photo as? DevicePhoto
@@ -194,6 +213,7 @@ class AlbumDetailViewModel : ViewModel() {
             }
         }
 
+        Log.d("ux-album", "Displayed photos are $filteredPhotos")
         _displayPhotos.value = filteredPhotos
     }
 
@@ -225,7 +245,7 @@ class AlbumDetailViewModel : ViewModel() {
      * Get current sort order (convenience method)
      */
     fun getCurrentSortOrder(): SortOrder {
-        return _sortOrder.value ?: SortOrder.DATE_NEWEST_FIRST
+        return _sortOrder.value ?: DEFAULT_SORT_ORDER
     }
 
     /**
@@ -233,7 +253,7 @@ class AlbumDetailViewModel : ViewModel() {
      */
     fun findPhotoPosition(photo: Photo): Int {
         val displayPhotos = getDisplayPhotos()
-        return displayPhotos.indexOfFirst { 
+        return displayPhotos.indexOfFirst {
             val photo1 = it as? DevicePhoto
             val photo2 = photo as? DevicePhoto
             photo1?.id == photo2?.id
@@ -246,7 +266,7 @@ class AlbumDetailViewModel : ViewModel() {
     fun containsPhoto(photo: Photo): Boolean {
         val allPhotos = _allPhotos.value ?: emptyList()
         val targetPhoto = photo as? DevicePhoto
-        return allPhotos.any { 
+        return allPhotos.any {
             val existingPhoto = it as? DevicePhoto
             existingPhoto?.uri == targetPhoto?.uri
         }
@@ -358,5 +378,9 @@ class AlbumDetailViewModel : ViewModel() {
         return allPhotos.filter { photo ->
             selectedIds.contains((photo as? DevicePhoto)?.id)
         }
+    }
+
+    companion object {
+        private val DEFAULT_SORT_ORDER = SortOrder.NAME_DESCENDING
     }
 }

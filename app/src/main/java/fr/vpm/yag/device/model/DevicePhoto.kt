@@ -10,4 +10,8 @@ class DevicePhoto(
     var displayName: String? = null,
     var additionDate: Date? = null,
     var isFavorite: Boolean = false
-) : Photo
+) : Photo {
+    override fun toString(): String {
+        return "DevicePhoto(id=$id, uri=$uri, path=$path, displayName=$displayName, additionDate=$additionDate, isFavorite=$isFavorite)"
+    }
+}
