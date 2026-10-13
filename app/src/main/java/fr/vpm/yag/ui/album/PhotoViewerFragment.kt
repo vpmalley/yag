@@ -4,6 +4,7 @@ import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.graphics.Matrix
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -14,6 +15,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.WindowInsetsCompat
@@ -66,6 +68,7 @@ class PhotoViewerFragment : Fragment() {
     private var initialImageY = 0f
     private var initialTouchX = 0f
     private var isSwipingVertically = false
+    private var wasFullScreenBeforeSheet = false
     private var swipeDirectionDecided = false
     private var touchStartedInSwipeUpZone = false
 
@@ -316,13 +319,18 @@ class PhotoViewerFragment : Fragment() {
     }
 
     private fun toggleFullScreen() {
-        isFullScreen = !isFullScreen
-        updateSystemUiVisibility(isFullScreen)
-
-        // Hide bottom sheet when entering full screen
-        if (isFullScreen) {
+        // While the details sheet is open, a tap closes it (which restores the previous mode)
+        if (::bottomSheetBehavior.isInitialized && bottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
             hideBottomSheet()
+            return
         }
+        setFullScreen(!isFullScreen)
+    }
+
+    private fun setFullScreen(fullScreen: Boolean) {
+        if (isFullScreen == fullScreen) return
+        isFullScreen = fullScreen
+        updateSystemUiVisibility(fullScreen)
     }
 
     private fun updateSystemUiVisibility(fullScreen: Boolean) {
@@ -374,8 +382,10 @@ class PhotoViewerFragment : Fragment() {
             // Configure bottom sheet behavior
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
             Log.d("photo", "bottom sheet is ${bottomSheetBehavior.state}")
-//            bottomSheetBehavior.skipCollapsed = true
-            bottomSheetBehavior.isDraggable = true  // Disable dragging, only show via swipe up
+            // Swiping down goes straight to hidden instead of settling on the collapsed (peek) state,
+            // which for this short sheet sits about as high as expanded and looks like a bounce
+            bottomSheetBehavior.skipCollapsed = true
+            bottomSheetBehavior.isDraggable = true
             bottomSheetBehavior.addBottomSheetCallback(object :
                 BottomSheetBehavior.BottomSheetCallback() {
                 override fun onStateChanged(bottomSheet: View, newState: Int) {
@@ -384,6 +394,7 @@ class PhotoViewerFragment : Fragment() {
                         BottomSheetBehavior.STATE_HIDDEN -> {
                             isBottomSheetExpanded = false
                             resetParallaxEffect()
+                            setFullScreen(wasFullScreenBeforeSheet)
                         }
 
                         BottomSheetBehavior.STATE_EXPANDED -> {
@@ -396,12 +407,21 @@ class PhotoViewerFragment : Fragment() {
                 }
 
                 override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                    // Apply parallax effect based on slide offset
-                    if (::bottomSheetBehavior.isInitialized) {
-                        applyParallaxEffect(slideOffset)
-                    }
+                    applyParallaxEffect(bottomSheet)
                 }
             })
+
+            // Going full screen when the sheet opens resizes the layout while the sheet is still
+            // animating towards the old expanded position: re-target it, and refit the photo
+            binding.root.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+                if (bottom - top == oldBottom - oldTop) return@addOnLayoutChangeListener
+                when (bottomSheetBehavior.state) {
+                    BottomSheetBehavior.STATE_SETTLING -> if (!isBottomSheetExpanded) {
+                        bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                    }
+                    BottomSheetBehavior.STATE_EXPANDED -> binding.root.post { applyParallaxEffect(bottomSheet) }
+                }
+            }
         }
 
         // Set up drag handle touch listener for manual swipe
@@ -471,13 +491,16 @@ class PhotoViewerFragment : Fragment() {
                     }
 
                     if (isSwipingVertically) {
-                        // Apply parallax effect to the photo
-                        val parallaxFactor = 0.3f
-                        view.y = initialImageY + (Math.min(deltaY, 0f) * parallaxFactor)
+                        // Once the sheet is showing, its onSlide drives the photo position
+                        if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                            // Apply parallax effect to the photo
+                            val parallaxFactor = 0.3f
+                            view.y = initialImageY + (Math.min(deltaY, 0f) * parallaxFactor)
 
-                        // If swipe up is significant, show the bottom sheet
-                        if (deltaY < -100 && bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
-                            showBottomSheet()
+                            // If swipe up is significant, show the bottom sheet
+                            if (deltaY < -100) {
+                                showBottomSheet()
+                            }
                         }
                         true
                     } else {
@@ -503,24 +526,45 @@ class PhotoViewerFragment : Fragment() {
         }
     }
 
-    private fun applyParallaxEffect(slideOffset: Float) {
-        // Apply parallax effect to the current photo view
-        currentPhotoView()?.let { photoView ->
-            // Apply parallax effect: move the photo up as the bottom sheet expands
-            val parallaxOffset = slideOffset * 200 // Adjust multiplier for desired effect
-            photoView.y = -parallaxOffset
-        }
+    private fun applyParallaxEffect(bottomSheet: View) {
+        val photoView = currentPhotoView() as? ImageView ?: return
+        val parentHeight = (bottomSheet.parent as? View)?.height ?: return
+        val viewHeight = photoView.height
+        if (parentHeight == 0 || viewHeight == 0) return
+
+        // Keep the photo centred in the space left above the sheet, shrinking it only if it doesn't fit
+        val coveredHeight = (parentHeight - bottomSheet.top).coerceIn(0, viewHeight)
+        val availableHeight = (viewHeight - coveredHeight).toFloat()
+        val contentHeight = displayedImageHeight(photoView)
+        val scale = if (contentHeight > availableHeight) availableHeight / contentHeight else 1f
+
+        photoView.scaleX = scale
+        photoView.scaleY = scale
+        photoView.translationY = -coveredHeight / 2f
+    }
+
+    private fun displayedImageHeight(imageView: ImageView): Float {
+        val drawable = imageView.drawable ?: return imageView.height.toFloat()
+        val values = FloatArray(9)
+        imageView.imageMatrix.getValues(values)
+        return drawable.intrinsicHeight * values[Matrix.MSCALE_Y]
     }
 
     private fun resetParallaxEffect() {
-        // Reset the current photo view position
         currentPhotoView()?.let { photoView ->
-            photoView.y = 0f
+            photoView.translationY = 0f
+            photoView.scaleX = 1f
+            photoView.scaleY = 1f
         }
     }
 
     private fun showBottomSheet() {
         if (::bottomSheetBehavior.isInitialized && bottomSheetBehavior.state != BottomSheetBehavior.STATE_EXPANDED) {
+            // Use the whole screen while the details are shown; remember the mode to restore it on hide
+            if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
+                wasFullScreenBeforeSheet = isFullScreen
+                setFullScreen(true)
+            }
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
             // Update content when showing bottom sheet
             updateBottomSheetContent(currentPhotoPosition)
