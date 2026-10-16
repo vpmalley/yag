@@ -118,9 +118,9 @@ class AlbumDetailFragment : Fragment() {
         totalScrollY = 0
         isHeaderCollapsed = false
         // Ensure header is visible with animation
-        if (binding.filterChipsGroup.visibility != View.VISIBLE || binding.filterChipsGroup.alpha < 1f) {
-            binding.filterChipsGroup.visibility = View.VISIBLE
-            binding.filterChipsGroup.animate()
+        if (binding.filterChipsContainer.visibility != View.VISIBLE || binding.filterChipsContainer.alpha < 1f) {
+            binding.filterChipsContainer.visibility = View.VISIBLE
+            binding.filterChipsContainer.animate()
                 .alpha(1f)
                 .setDuration(200)
                 .start()
@@ -248,18 +248,18 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun collapseHeader() {
-        binding.filterChipsGroup.animate()
+        binding.filterChipsContainer.animate()
             .alpha(0f)
             .setDuration(200)
             .withEndAction {
-                binding.filterChipsGroup.visibility = View.GONE
+                binding.filterChipsContainer.visibility = View.GONE
             }
             .start()
     }
 
     private fun expandHeader() {
-        binding.filterChipsGroup.visibility = View.VISIBLE
-        binding.filterChipsGroup.animate()
+        binding.filterChipsContainer.visibility = View.VISIBLE
+        binding.filterChipsContainer.animate()
             .alpha(1f)
             .setDuration(200)
             .start()
@@ -327,16 +327,16 @@ class AlbumDetailFragment : Fragment() {
         val duration = 200L
         if (isSelectionMode) {
             // Hide filter chips, show selection bar
-            if (binding.filterChipsGroup.visibility == View.VISIBLE) {
-                binding.filterChipsGroup.animate()
+            if (binding.filterChipsContainer.visibility == View.VISIBLE) {
+                binding.filterChipsContainer.animate()
                     .alpha(0f)
                     .setDuration(duration)
                     .withEndAction {
-                        binding.filterChipsGroup.visibility = View.GONE
+                        binding.filterChipsContainer.visibility = View.GONE
                     }
                     .start()
             } else {
-                binding.filterChipsGroup.visibility = View.GONE
+                binding.filterChipsContainer.visibility = View.GONE
             }
             
             binding.selectionActionBar.visibility = View.VISIBLE
@@ -359,9 +359,9 @@ class AlbumDetailFragment : Fragment() {
                 binding.selectionActionBar.visibility = View.GONE
             }
             
-            binding.filterChipsGroup.visibility = View.VISIBLE
-            binding.filterChipsGroup.alpha = 0f
-            binding.filterChipsGroup.animate()
+            binding.filterChipsContainer.visibility = View.VISIBLE
+            binding.filterChipsContainer.alpha = 0f
+            binding.filterChipsContainer.animate()
                 .alpha(1f)
                 .setDuration(duration)
                 .start()
@@ -403,6 +403,16 @@ class AlbumDetailFragment : Fragment() {
                 AlbumDetailViewModel.FilterMode.NONE
             } else {
                 AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW
+            }
+            setFilterMode(newMode)
+        }
+
+        binding.nonFavesChip.setOnClickListener {
+            val currentMode = albumDetailViewModel.getFilterMode()
+            val newMode = if (currentMode == AlbumDetailViewModel.FilterMode.NON_FAVOURITES_ONLY) {
+                AlbumDetailViewModel.FilterMode.NONE
+            } else {
+                AlbumDetailViewModel.FilterMode.NON_FAVOURITES_ONLY
             }
             setFilterMode(newMode)
         }
@@ -654,6 +664,7 @@ class AlbumDetailFragment : Fragment() {
             AlbumDetailViewModel.FilterMode.NO_RAW -> "No RAW filter applied"
             AlbumDetailViewModel.FilterMode.FAVOURITES_ONLY -> "Favourites only"
             AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW -> "Favourites + RAW versions"
+            AlbumDetailViewModel.FilterMode.NON_FAVOURITES_ONLY -> "Non-favourites only"
             AlbumDetailViewModel.FilterMode.NONE -> "All photos shown"
         }
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
@@ -667,6 +678,7 @@ class AlbumDetailFragment : Fragment() {
         binding.noRawChip.isChecked = currentMode == AlbumDetailViewModel.FilterMode.NO_RAW
         binding.favesChip.isChecked = currentMode == AlbumDetailViewModel.FilterMode.FAVOURITES_ONLY
         binding.favesWithRawChip.isChecked = currentMode == AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW
+        binding.nonFavesChip.isChecked = currentMode == AlbumDetailViewModel.FilterMode.NON_FAVOURITES_ONLY
     }
 
     private fun toggleRawFilter() {

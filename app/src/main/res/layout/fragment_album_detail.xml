@@ -17,43 +17,64 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <!-- Filter chips header (shown when not in selection mode) -->
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/filterChipsGroup"
+        <HorizontalScrollView
+            android:id="@+id/filterChipsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/colorSurface"
-            android:padding="8dp"
-            app:chipSpacing="8dp"
-            app:singleSelection="true"
-            android:visibility="visible">
+            android:scrollbars="none"
+            android:fillViewport="true">
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/noRawChip"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/filterChipsGroup"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="no RAW"
-                android:checkable="true"
-                android:checked="false" />
+                android:background="?attr/colorSurface"
+                android:paddingStart="8dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="8dp"
+                app:chipSpacing="8dp"
+                app:singleSelection="true"
+                app:singleLine="true"
+                android:visibility="visible">
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/favesChip"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="faves"
-                android:checkable="true"
-                android:checked="false" />
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/noRawChip"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="no RAW"
+                    android:checkable="true"
+                    android:checked="false" />
 
-            <com.google.android.material.chip.Chip
-                android:id="@+id/favesWithRawChip"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="faves + RAW version"
-                android:checkable="true"
-                android:checked="false" />
-        </com.google.android.material.chip.ChipGroup>
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/favesChip"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="faves"
+                    android:checkable="true"
+                    android:checked="false" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/favesWithRawChip"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="faves + RAW version"
+                    android:checkable="true"
+                    android:checked="false" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/nonFavesChip"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="non-faves"
+                    android:checkable="true"
+                    android:checked="false" />
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
 
         <!-- Selection action bar (shown when in selection mode) -->
         <LinearLayout

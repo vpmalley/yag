@@ -25,10 +25,11 @@ class AlbumDetailViewModel : ViewModel() {
 
     // Filter mode
     enum class FilterMode {
-        NONE,           // No filtering - show all photos
-        NO_RAW,        // Filter out RAW photos
-        FAVOURITES_ONLY, // Show only favourite photos
-        FAVOURITES_WITH_RAW  // Show favourite photos + RAW versions that match
+        NONE,                   // No filtering - show all photos
+        NO_RAW,                // Filter out RAW photos
+        FAVOURITES_ONLY,       // Show only favourite photos
+        FAVOURITES_WITH_RAW,   // Show favourite photos + RAW versions that match
+        NON_FAVOURITES_ONLY    // Show only non-favourite photos
     }
 
     private val _filterMode = MutableLiveData<FilterMode>()
@@ -103,7 +104,8 @@ class AlbumDetailViewModel : ViewModel() {
             FilterMode.NONE -> FilterMode.NO_RAW
             FilterMode.NO_RAW -> FilterMode.FAVOURITES_ONLY
             FilterMode.FAVOURITES_ONLY -> FilterMode.FAVOURITES_WITH_RAW
-            FilterMode.FAVOURITES_WITH_RAW -> FilterMode.NONE
+            FilterMode.FAVOURITES_WITH_RAW -> FilterMode.NON_FAVOURITES_ONLY
+            FilterMode.NON_FAVOURITES_ONLY -> FilterMode.NONE
         }
         setFilterMode(nextMode)
     }
@@ -210,6 +212,10 @@ class AlbumDetailViewModel : ViewModel() {
                         favoriteBaseNames.contains(extractBaseFilename(filename))
                     } ?: false
                 }
+            }
+
+            FilterMode.NON_FAVOURITES_ONLY -> sortedPhotos.filter { photo ->
+                (photo as? DevicePhoto)?.isFavorite != true
             }
         }
 
