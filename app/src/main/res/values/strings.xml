@@ -51,4 +51,7 @@
     <string name="filter_all_photos">All photos shown</string>
     <string name="filter_raw_hidden">RAW photos hidden</string>
     <string name="filter_all_shown">All photos shown</string>
+
+    <!-- Photo count -->
+    <string name="photo_count">%1$d photos</string>
 </resources>

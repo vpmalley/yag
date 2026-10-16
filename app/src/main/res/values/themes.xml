@@ -21,5 +21,8 @@
         <!-- Customize your theme here. -->
 
         <item name="fontFamily">@font/josefin_sans</item>
+        
+        <!-- Toolbar subtitle styling -->
+        <item name="subtitleTextStyle">@style/ToolbarSubtitle</item>
     </style>
 </resources>

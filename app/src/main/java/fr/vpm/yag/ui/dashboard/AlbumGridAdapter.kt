@@ -20,20 +20,24 @@ class AlbumGridAdapter(
 
     private var albums: List<Album> = emptyList()
 
-    inner class AlbumViewHolder(private val binding: ItemAlbumGridBinding) : 
+    inner class AlbumViewHolder(private val binding: ItemAlbumGridBinding) :
         RecyclerView.ViewHolder(binding.root) {
-        
+
         fun bind(album: Album) {
             binding.albumName.text = album.name ?: "Unknown Album"
-            
+
+            // Set photo count
+            val photoCount = album.photos.size
+            binding.albumPhotoCount.text = photoCount.toString()
+
             // Get first photo or null
             val firstPhoto = album.photos.firstOrNull()
-            
+
             if (firstPhoto != null) {
                 // Cast to DevicePhoto to access uri property
                 val devicePhoto = firstPhoto as? DevicePhoto
                 val uri = devicePhoto?.uri
-                
+
                 if (uri != null) {
                     // Load image with Glide using memory-efficient settings
                     Glide.with(binding.root.context)
@@ -53,13 +57,13 @@ class AlbumGridAdapter(
                 // No photos - set placeholder background
                 setPlaceholderBackground()
             }
-            
+
             // Set click listener for the album
             binding.root.setOnClickListener {
                 onAlbumClick(album, binding.root)
             }
         }
-        
+
         private fun setPlaceholderBackground() {
             Glide.with(binding.root.context).clear(binding.albumThumbnail)
             binding.albumThumbnail.setImageDrawable(null)
@@ -71,8 +75,8 @@ class AlbumGridAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AlbumViewHolder {
         val binding = ItemAlbumGridBinding.inflate(
-            LayoutInflater.from(parent.context), 
-            parent, 
+            LayoutInflater.from(parent.context),
+            parent,
             false
         )
         return AlbumViewHolder(binding)

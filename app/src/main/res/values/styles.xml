@@ -1,0 +1,12 @@
+<resources>
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.YAG">
+        <!-- Customize your theme here. -->
+    </style>
+    
+    <!-- Toolbar subtitle style -->
+    <style name="ToolbarSubtitle">
+        <item name="android:textColor">@color/white_80</item>
+        <item name="android:textSize">@dimen/text_size_small</item>
+    </style>
+</resources>

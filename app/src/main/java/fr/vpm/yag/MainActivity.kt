@@ -43,6 +43,10 @@ class MainActivity : AppCompatActivity() {
         binding.toolbar.title = title
     }
 
+    fun setToolbarSubtitle(subtitle: String?) {
+        binding.toolbar.subtitle = subtitle
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 

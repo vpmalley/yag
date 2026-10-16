@@ -135,6 +135,10 @@ class AlbumDetailFragment : Fragment() {
         // Set album name in the toolbar
         val activity = requireActivity() as? MainActivity
         activity?.setToolbarTitle(album.name ?: getString(R.string.unknown_album))
+        
+        // Set photo count as subtitle
+        val photoCount = album.photos.size
+        activity?.setToolbarSubtitle(getString(R.string.photo_count, photoCount))
     }
 
     private fun setupRecyclerView() {
@@ -309,11 +313,12 @@ class AlbumDetailFragment : Fragment() {
     }
 
     private fun updateSelectionModeUI(isSelectionMode: Boolean) {
-        // Update title to show selection count when in selection mode
+        // Update title and subtitle when in selection mode
         val activity = requireActivity() as? MainActivity
         if (isSelectionMode) {
             updateSelectionCountText()
             activity?.setToolbarTitle(getString(R.string.select_photos))
+            activity?.setToolbarSubtitle(null)
             // Reset scroll state when entering selection mode
             // to ensure the header is fully visible when we exit
             isHeaderCollapsed = false
@@ -321,6 +326,9 @@ class AlbumDetailFragment : Fragment() {
         } else {
             val album = findAlbumById(args.albumId)
             activity?.setToolbarTitle(album?.name ?: getString(R.string.unknown_album))
+            // Restore photo count subtitle
+            val photoCount = album?.photos?.size ?: 0
+            activity?.setToolbarSubtitle(getString(R.string.photo_count, photoCount))
         }
         
         // Animate the transition between filter chips and selection bar
@@ -757,9 +765,10 @@ class AlbumDetailFragment : Fragment() {
         super.onDestroyView()
         // Exit selection mode when fragment is destroyed
         albumDetailViewModel.setSelectionMode(false)
-        // Clear toolbar title when fragment is destroyed
+        // Clear toolbar title and subtitle when fragment is destroyed
         val activity = requireActivity() as? MainActivity
         activity?.setToolbarTitle(null)
+        activity?.setToolbarSubtitle(null)
         _binding = null
     }
 
