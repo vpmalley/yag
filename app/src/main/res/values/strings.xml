@@ -7,4 +7,48 @@
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="pcloud_login_action">Log in to pcloud</string>
     <string name="title_settings">Settings</string>
+
+    <!-- Album Detail -->
+    <string name="unknown_album">Unknown Album</string>
+    <string name="select_photos">Select photos</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="no_photos_selected">No photos selected</string>
+    <string name="no_photos_to_delete">No photos to delete</string>
+    <string name="no_photos_to_share">No photos to share</string>
+    <string name="no_favorite_photos_to_share">No favorite photos to share</string>
+
+    <!-- Delete Confirmation -->
+    <string name="delete_photos_title">Delete Photos</string>
+    <string name="delete_photos_confirmation">Are you sure you want to delete %1$d photo%2$s?</string>
+    <string name="delete_action">Delete</string>
+    <string name="cancel_action">Cancel</string>
+    <string name="moved_to_recycle_bin">Moved %1$d photo%2$s to recycle bin</string>
+    <string name="moved_non_favorites_to_recycle_bin">Moved %1$d non-favorite photos to recycle bin</string>
+    <string name="no_non_favorite_photos_to_delete">No non-favorite photos to delete</string>
+
+    <!-- Trash/Recycle Bin -->
+    <string name="recycle_bin_unavailable">Recycle bin is only available on Android 11+</string>
+    <string name="failed_to_move_to_trash">Failed to move to trash: %s</string>
+
+    <!-- Share -->
+    <string name="share_photos">Share Photos</string>
+
+    <!-- Selection Actions -->
+    <string name="select_all_description">Select all</string>
+    <string name="share_selected_description">Share selected</string>
+    <string name="delete_description">Delete</string>
+    <string name="cancel_description">Cancel</string>
+
+    <!-- Filters -->
+    <string name="filter_no_raw">no RAW</string>
+    <string name="filter_faves">faves</string>
+    <string name="filter_faves_with_raw">faves + RAW version</string>
+    <string name="filter_non_faves">non-faves</string>
+    <string name="filter_no_raw_applied">No RAW filter applied</string>
+    <string name="filter_favourites_only">Favourites only</string>
+    <string name="filter_favourites_with_raw">Favourites + RAW versions</string>
+    <string name="filter_non_favourites_only">Non-favourites only</string>
+    <string name="filter_all_photos">All photos shown</string>
+    <string name="filter_raw_hidden">RAW photos hidden</string>
+    <string name="filter_all_shown">All photos shown</string>
 </resources>

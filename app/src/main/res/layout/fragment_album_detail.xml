@@ -21,8 +21,8 @@
             android:id="@+id/filterChipsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:scrollbars="none"
-            android:fillViewport="true">
+            android:fillViewport="true"
+            android:scrollbars="none">
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/filterChipsGroup"
@@ -33,46 +33,46 @@
                 android:paddingTop="8dp"
                 android:paddingEnd="8dp"
                 android:paddingBottom="8dp"
+                android:visibility="visible"
                 app:chipSpacing="8dp"
-                app:singleSelection="true"
                 app:singleLine="true"
-                android:visibility="visible">
+                app:singleSelection="true">
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/noRawChip"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="no RAW"
                     android:checkable="true"
-                    android:checked="false" />
+                    android:checked="false"
+                    android:text="@string/filter_no_raw" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/favesChip"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="faves"
                     android:checkable="true"
-                    android:checked="false" />
+                    android:checked="false"
+                    android:text="@string/filter_faves" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/favesWithRawChip"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="faves + RAW version"
                     android:checkable="true"
-                    android:checked="false" />
+                    android:checked="false"
+                    android:text="@string/filter_faves_with_raw" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/nonFavesChip"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="non-faves"
                     android:checkable="true"
-                    android:checked="false" />
+                    android:checked="false"
+                    android:text="@string/filter_non_faves" />
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
 
@@ -91,7 +91,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Select all"
+                android:contentDescription="@string/select_all_description"
                 android:gravity="center_vertical"
                 android:padding="8dp"
                 android:src="@drawable/ic_check_circle"
@@ -102,10 +102,21 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Share selected"
+                android:contentDescription="@string/share_selected_description"
                 android:gravity="center_vertical"
                 android:padding="8dp"
                 android:src="@drawable/ic_share_white_24"
+                app:tint="?attr/colorOnSurface" />
+
+            <ImageButton
+                android:id="@+id/deleteSelectedButton"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/delete_description"
+                android:gravity="center_vertical"
+                android:padding="8dp"
+                android:src="@drawable/ic_delete"
                 app:tint="?attr/colorOnSurface" />
 
             <ImageButton
@@ -113,10 +124,10 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Cancel"
+                android:contentDescription="@string/cancel_description"
                 android:gravity="center_vertical"
                 android:padding="8dp"
-                android:src="@drawable/ic_delete"
+                android:src="@drawable/ic_cancel_24dp"
                 app:tint="?attr/colorOnSurface" />
 
             <TextView

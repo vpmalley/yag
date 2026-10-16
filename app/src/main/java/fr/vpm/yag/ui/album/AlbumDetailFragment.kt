@@ -134,7 +134,7 @@ class AlbumDetailFragment : Fragment() {
     private fun setupAlbumHeader(album: Album) {
         // Set album name in the toolbar
         val activity = requireActivity() as? MainActivity
-        activity?.setToolbarTitle(album.name ?: "Unknown Album")
+        activity?.setToolbarTitle(album.name ?: getString(R.string.unknown_album))
     }
 
     private fun setupRecyclerView() {
@@ -313,14 +313,14 @@ class AlbumDetailFragment : Fragment() {
         val activity = requireActivity() as? MainActivity
         if (isSelectionMode) {
             updateSelectionCountText()
-            activity?.setToolbarTitle("Select photos")
+            activity?.setToolbarTitle(getString(R.string.select_photos))
             // Reset scroll state when entering selection mode
             // to ensure the header is fully visible when we exit
             isHeaderCollapsed = false
             totalScrollY = 0
         } else {
             val album = findAlbumById(args.albumId)
-            activity?.setToolbarTitle(album?.name ?: "Unknown Album")
+            activity?.setToolbarTitle(album?.name ?: getString(R.string.unknown_album))
         }
         
         // Animate the transition between filter chips and selection bar
@@ -370,7 +370,7 @@ class AlbumDetailFragment : Fragment() {
 
     private fun updateSelectionCountText() {
         val selectedCount = albumDetailViewModel.getSelectedCount()
-        binding.selectionCountText.text = "$selectedCount selected"
+        binding.selectionCountText.text = getString(R.string.selected_count, selectedCount)
     }
 
 
@@ -438,6 +438,10 @@ class AlbumDetailFragment : Fragment() {
             shareSelectedPhotos()
         }
 
+        binding.deleteSelectedButton.setOnClickListener {
+            showDeleteConfirmationDialog()
+        }
+
         binding.cancelSelectionButton.setOnClickListener {
             albumDetailViewModel.setSelectionMode(false)
         }
@@ -455,6 +459,50 @@ class AlbumDetailFragment : Fragment() {
         }
         
         sharePhotos(photoUris)
+    }
+
+    private fun showDeleteConfirmationDialog() {
+        val selectedCount = albumDetailViewModel.getSelectedCount()
+        
+        if (selectedCount == 0) {
+            Toast.makeText(requireContext(), getString(R.string.no_photos_selected), Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        // Determine plural form for the message
+        val photoSuffix = if (selectedCount > 1) "s" else ""
+        val message = getString(R.string.delete_photos_confirmation, selectedCount, photoSuffix)
+        
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.delete_photos_title)
+            .setMessage(message)
+            .setPositiveButton(R.string.delete_action) { _, _ ->
+                deleteSelectedPhotos()
+            }
+            .setNegativeButton(R.string.cancel_action, null)
+            .show()
+    }
+
+    private fun deleteSelectedPhotos() {
+        val selectedPhotos = albumDetailViewModel.getSelectedPhotos()
+        val photosToDelete = selectedPhotos.mapNotNull { photo ->
+            photo as? DevicePhoto
+        }
+        
+        if (photosToDelete.isEmpty()) {
+            Toast.makeText(requireContext(), getString(R.string.no_photos_to_delete), Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        val count = photosToDelete.size
+        movePhotosToTrash(photosToDelete)
+        
+        // Exit selection mode after deletion
+        albumDetailViewModel.setSelectionMode(false)
+        
+        // Show toast with proper pluralization
+        val photoSuffix = if (count > 1) "s" else ""
+        Toast.makeText(requireContext(), getString(R.string.moved_to_recycle_bin, count, photoSuffix), Toast.LENGTH_SHORT).show()
     }
 
     private fun showDeleteOptionsBottomSheet() {
@@ -479,7 +527,7 @@ class AlbumDetailFragment : Fragment() {
         }
         
         if (nonFavoritePhotos.isEmpty()) {
-            Toast.makeText(requireContext(), "No non-favorite photos to delete", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.no_non_favorite_photos_to_delete), Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -489,7 +537,7 @@ class AlbumDetailFragment : Fragment() {
         // Move to recycle bin/trash
         movePhotosToTrash(nonFavoritePhotos)
         
-        Toast.makeText(requireContext(), "Moved $count non-favorite photos to recycle bin", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), getString(R.string.moved_non_favorites_to_recycle_bin, count), Toast.LENGTH_SHORT).show()
     }
 
     private fun movePhotosToTrash(photos: List<Photo>) {
@@ -521,13 +569,13 @@ class AlbumDetailFragment : Fragment() {
             try {
                 trashRequest.send()
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to move to trash: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.failed_to_move_to_trash, e.message), Toast.LENGTH_LONG).show()
             }
         } else {
             // For older Android versions, show a message that trash is not supported
             Toast.makeText(
                 requireContext(),
-                "Recycle bin is only available on Android 11+",
+                getString(R.string.recycle_bin_unavailable),
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -563,7 +611,7 @@ class AlbumDetailFragment : Fragment() {
         val photosToShare = getAllPhotosUris(albumDetailViewModel.getDisplayPhotos())
         
         if (photosToShare.isEmpty()) {
-            Toast.makeText(requireContext(), "No photos to share", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.no_photos_to_share), Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -574,7 +622,7 @@ class AlbumDetailFragment : Fragment() {
         val photosToShare = getFavoritePhotosUris(albumDetailViewModel.getDisplayPhotos())
         
         if (photosToShare.isEmpty()) {
-            Toast.makeText(requireContext(), "No favorite photos to share", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.no_favorite_photos_to_share), Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -586,7 +634,7 @@ class AlbumDetailFragment : Fragment() {
         val photosToShare = getFavoritePhotosWithRawMatches(allPhotos)
         
         if (photosToShare.isEmpty()) {
-            Toast.makeText(requireContext(), "No favorite photos to share", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.no_favorite_photos_to_share), Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -655,17 +703,17 @@ class AlbumDetailFragment : Fragment() {
             flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
         }
         
-        startActivity(Intent.createChooser(shareIntent, "Share Photos"))
+        startActivity(Intent.createChooser(shareIntent, getString(R.string.share_photos)))
     }
 
     private fun setFilterMode(mode: AlbumDetailViewModel.FilterMode) {
         albumDetailViewModel.setFilterMode(mode)
         val message = when (mode) {
-            AlbumDetailViewModel.FilterMode.NO_RAW -> "No RAW filter applied"
-            AlbumDetailViewModel.FilterMode.FAVOURITES_ONLY -> "Favourites only"
-            AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW -> "Favourites + RAW versions"
-            AlbumDetailViewModel.FilterMode.NON_FAVOURITES_ONLY -> "Non-favourites only"
-            AlbumDetailViewModel.FilterMode.NONE -> "All photos shown"
+            AlbumDetailViewModel.FilterMode.NO_RAW -> getString(R.string.filter_no_raw_applied)
+            AlbumDetailViewModel.FilterMode.FAVOURITES_ONLY -> getString(R.string.filter_favourites_only)
+            AlbumDetailViewModel.FilterMode.FAVOURITES_WITH_RAW -> getString(R.string.filter_favourites_with_raw)
+            AlbumDetailViewModel.FilterMode.NON_FAVOURITES_ONLY -> getString(R.string.filter_non_favourites_only)
+            AlbumDetailViewModel.FilterMode.NONE -> getString(R.string.filter_all_photos)
         }
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         
@@ -684,9 +732,9 @@ class AlbumDetailFragment : Fragment() {
     private fun toggleRawFilter() {
         albumDetailViewModel.toggleFilter()
         val message = if (albumDetailViewModel.isFilterEnabled()) {
-            "RAW photos hidden"
+            getString(R.string.filter_raw_hidden)
         } else {
-            "All photos shown"
+            getString(R.string.filter_all_shown)
         }
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
     }
