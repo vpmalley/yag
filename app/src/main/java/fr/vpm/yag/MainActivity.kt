@@ -36,8 +36,6 @@ class MainActivity : AppCompatActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels { getSettingsViewModelFactory() }
     private val deviceAlbumViewModel: DeviceAlbumViewModel by viewModels()
 
-    private val photoDestinations = setOf(R.id.albumDetailFragment, R.id.photoViewerFragment)
-
     fun setToolbarVisibility(visible: Boolean) {
         binding.toolbar.visibility = if (visible) View.VISIBLE else View.GONE
     }
@@ -80,15 +78,6 @@ class MainActivity : AppCompatActivity() {
         )
         binding.toolbar.setupWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
-
-        // Photo screens use a dark grey that extends behind the toolbar and system bars
-        navController.addOnDestinationChangedListener { _, destination, _ ->
-            if (destination.id in photoDestinations) {
-                binding.root.setBackgroundColor(getColor(R.color.photo_background))
-            } else {
-                binding.root.background = null
-            }
-        }
         
         // Scan device for photos at app startup
         scanDeviceAlbums()

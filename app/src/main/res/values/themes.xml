@@ -1,20 +1,22 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.YAG" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Base application theme. Always dark: every screen sits on the dark grey photo background. -->
+    <style name="Theme.YAG" parent="Theme.MaterialComponents.NoActionBar">
         <!-- Explicitly ensure no action bar for all API levels -->
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
         <item name="android:windowNoTitle">true</item>
         <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimary">@color/purple_200</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
-        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorOnPrimary">@color/black</item>
         <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
+        <item name="colorSecondaryVariant">@color/teal_200</item>
         <item name="colorOnSecondary">@color/black</item>
-        <item name="colorOnSurface">@color/purple_500</item>
+        <!-- Background shared by all screens, visible behind the toolbar and system bars -->
+        <item name="android:colorBackground">@color/photo_background</item>
+        <item name="android:windowBackground">@color/photo_background</item>
         <!-- Edge-to-edge: transparent system bars, content drawn behind them -->
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
@@ -25,7 +27,7 @@
         <!-- Customize your theme here. -->
 
         <item name="fontFamily">@font/josefin_sans</item>
-        
+
         <!-- Toolbar subtitle styling -->
         <item name="subtitleTextStyle">@style/ToolbarSubtitle</item>
     </style>
