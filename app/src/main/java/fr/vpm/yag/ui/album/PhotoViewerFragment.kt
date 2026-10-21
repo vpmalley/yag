@@ -1,5 +1,6 @@
 package fr.vpm.yag.ui.album
 
+import android.app.RecoverableSecurityException
 import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
@@ -18,6 +19,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.widget.NestedScrollView
@@ -242,53 +244,73 @@ class PhotoViewerFragment : Fragment() {
                 // Clear any pending favorite update
                 pendingFavoritePhoto = null
                 
-            } catch (e: android.app.RecoverableSecurityException) {
-                Log.e("PhotoViewer", "Recoverable security exception for photo ${devicePhoto.id}", e)
-                // Store pending state for retry after permission is granted
-                pendingFavoritePhoto = devicePhoto
-                pendingFavoriteState = isFavorite
-                
-                // Both APIs give a PendingIntent asking the user to allow the write;
-                // the result comes back in onActivityResult with REQUEST_CODE_FAVORITE_UPDATE
-                withContext(Dispatchers.Main) {
-                    try {
-                        val writeRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                            // Android 11+: Use MediaStore.createWriteRequest
-                            MediaStore.createWriteRequest(
-                                requireContext().contentResolver,
-                                listOf(contentUri)
-                            )
-                        } else {
-                            // Android 10: Use the recovery action carried by the exception
-                            e.userAction.actionIntent
-                        }
-                        startIntentSenderForResult(
-                            writeRequest.intentSender,
-                            REQUEST_CODE_FAVORITE_UPDATE,
-                            null, 0, 0, 0, null
-                        )
-                    } catch (ex: Exception) {
-                        Log.e("PhotoViewer", "Failed to start permission request", ex)
-                        Toast.makeText(
-                            requireContext(),
-                            "Failed to request permission: ${ex.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                        pendingFavoritePhoto = null
-                    }
+            } catch (e: SecurityException) {
+                // RecoverableSecurityException only exists on API 29+, so it can't be named in a
+                // catch clause with minSdk 23: catch its parent and check the type behind a version guard
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && e is RecoverableSecurityException) {
+                    requestFavoriteWritePermission(e, devicePhoto, isFavorite, contentUri)
+                } else {
+                    showFavoriteUpdateError(devicePhoto, e)
                 }
             } catch (e: Exception) {
-                Log.e("PhotoViewer", "Failed to update IS_FAVORITE for photo ${devicePhoto.id}", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        requireContext(),
-                        "Failed to update favorite: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                showFavoriteUpdateError(devicePhoto, e)
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private suspend fun requestFavoriteWritePermission(
+        e: RecoverableSecurityException,
+        devicePhoto: DevicePhoto,
+        isFavorite: Boolean,
+        contentUri: Uri
+    ) {
+        Log.e("PhotoViewer", "Recoverable security exception for photo ${devicePhoto.id}", e)
+        // Store pending state for retry after permission is granted
+        pendingFavoritePhoto = devicePhoto
+        pendingFavoriteState = isFavorite
+
+        // Both APIs give a PendingIntent asking the user to allow the write;
+        // the result comes back in onActivityResult with REQUEST_CODE_FAVORITE_UPDATE
+        withContext(Dispatchers.Main) {
+            try {
+                val writeRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    // Android 11+: Use MediaStore.createWriteRequest
+                    MediaStore.createWriteRequest(
+                        requireContext().contentResolver,
+                        listOf(contentUri)
+                    )
+                } else {
+                    // Android 10: Use the recovery action carried by the exception
+                    e.userAction.actionIntent
                 }
+                startIntentSenderForResult(
+                    writeRequest.intentSender,
+                    REQUEST_CODE_FAVORITE_UPDATE,
+                    null, 0, 0, 0, null
+                )
+            } catch (ex: Exception) {
+                Log.e("PhotoViewer", "Failed to start permission request", ex)
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to request permission: ${ex.message}",
+                    Toast.LENGTH_LONG
+                ).show()
                 pendingFavoritePhoto = null
             }
         }
+    }
+
+    private suspend fun showFavoriteUpdateError(devicePhoto: DevicePhoto, e: Exception) {
+        Log.e("PhotoViewer", "Failed to update IS_FAVORITE for photo ${devicePhoto.id}", e)
+        withContext(Dispatchers.Main) {
+            Toast.makeText(
+                requireContext(),
+                "Failed to update favorite: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        pendingFavoritePhoto = null
     }
 
     private fun showDeleteConfirmation(devicePhoto: DevicePhoto) {
