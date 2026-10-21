@@ -50,4 +50,46 @@ class DeviceAlbumViewModel : ViewModel() {
             }
         }
     }
+
+    /**
+     * Update a photo's favorite status in the cached albums
+     * This should be called when a photo's favorite status changes in MediaStore
+     */
+    fun updatePhotoFavoriteStatus(photoId: Long, isFavorite: Boolean) {
+        val currentAlbums = _albums.value ?: return
+        val updatedAlbums = currentAlbums.map { album ->
+            val updatedPhotos = album.photos.map { photo ->
+                if (photo is fr.vpm.yag.device.model.DevicePhoto && photo.id == photoId) {
+                    // Create a new DevicePhoto with updated favorite status
+                    fr.vpm.yag.device.model.DevicePhoto(
+                        id = photo.id,
+                        uri = photo.uri,
+                        path = photo.path,
+                        displayName = photo.displayName,
+                        additionDate = photo.additionDate,
+                        isFavorite = isFavorite
+                    )
+                } else {
+                    photo
+                }
+            }.toMutableList()
+            // Create a new Album with updated photos
+            fr.vpm.yag.device.model.Album(
+                id = album.id,
+                name = album.name,
+                details = album.details,
+                photos = updatedPhotos,
+                source = album.source
+            )
+        }.toList()
+        _albums.value = updatedAlbums
+    }
+
+    /**
+     * Refresh albums from MediaStore
+     * Call this when data might have changed (e.g., after modifying photos)
+     */
+    fun refreshAlbums(context: Context) {
+        fetchDeviceAlbums(context)
+    }
 }

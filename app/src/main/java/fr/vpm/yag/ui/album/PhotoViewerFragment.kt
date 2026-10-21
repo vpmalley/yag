@@ -57,6 +57,15 @@ class PhotoViewerFragment : Fragment() {
     // Full screen mode flag
     private var isFullScreen = false
 
+    // Request code for favorite update permission
+    private companion object {
+        private const val REQUEST_CODE_FAVORITE_UPDATE = 1001
+    }
+
+    // Pending favorite update state (for handling permission result)
+    private var pendingFavoritePhoto: DevicePhoto? = null
+    private var pendingFavoriteState: Boolean = false
+
     // Bottom sheet behavior
     private lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
     private var bottomSheetView: View? = null
@@ -119,6 +128,26 @@ class PhotoViewerFragment : Fragment() {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_FAVORITE_UPDATE) {
+            if (resultCode == android.app.Activity.RESULT_OK) {
+                // Permission granted, retry the pending favorite update
+                pendingFavoritePhoto?.let { devicePhoto ->
+                    updateFavoriteInMediaStore(devicePhoto, pendingFavoriteState)
+                    pendingFavoritePhoto = null
+                }
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    "Permission denied. Cannot update favorite.",
+                    Toast.LENGTH_SHORT
+                ).show()
+                pendingFavoritePhoto = null
+            }
+        }
+    }
+
     private fun findAlbumById(albumId: String): fr.vpm.yag.device.model.Album? {
         return deviceAlbumViewModel.albums.value?.firstOrNull { it.id == albumId }
     }
@@ -136,6 +165,11 @@ class PhotoViewerFragment : Fragment() {
             },
             onFavoriteClick = { devicePhoto, newFavoriteState ->
                 updateFavoriteInMediaStore(devicePhoto, newFavoriteState)
+                // Update local photo immediately for UI feedback
+                devicePhoto.isFavorite = newFavoriteState
+                // Notify ViewModels that photo data changed
+                albumDetailViewModel.onPhotoFavoriteChanged(devicePhoto)
+                deviceAlbumViewModel.updatePhotoFavoriteStatus(devicePhoto.id, newFavoriteState)
             },
             onDeleteClick = { devicePhoto ->
                 showDeleteConfirmation(devicePhoto)
@@ -189,9 +223,9 @@ class PhotoViewerFragment : Fragment() {
         Log.d("PhotoViewer", "Updating favorite for photo ${devicePhoto.id} to $isFavorite")
 
         CoroutineScope(Dispatchers.IO).launch {
-            try {
-                val contentUri = devicePhoto.uri ?: return@launch
+            val contentUri = devicePhoto.uri ?: return@launch
 
+            try {
                 val values = ContentValues().apply {
                     put(MediaStore.Images.Media.IS_FAVORITE, if (isFavorite) 1 else 0)
                 }
@@ -204,8 +238,55 @@ class PhotoViewerFragment : Fragment() {
                 )
 
                 Log.d("PhotoViewer", "Successfully updated IS_FAVORITE for photo ${devicePhoto.id}")
+                
+                // Clear any pending favorite update
+                pendingFavoritePhoto = null
+                
+            } catch (e: android.app.RecoverableSecurityException) {
+                Log.e("PhotoViewer", "Recoverable security exception for photo ${devicePhoto.id}", e)
+                // Store pending state for retry after permission is granted
+                pendingFavoritePhoto = devicePhoto
+                pendingFavoriteState = isFavorite
+                
+                // Both APIs give a PendingIntent asking the user to allow the write;
+                // the result comes back in onActivityResult with REQUEST_CODE_FAVORITE_UPDATE
+                withContext(Dispatchers.Main) {
+                    try {
+                        val writeRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                            // Android 11+: Use MediaStore.createWriteRequest
+                            MediaStore.createWriteRequest(
+                                requireContext().contentResolver,
+                                listOf(contentUri)
+                            )
+                        } else {
+                            // Android 10: Use the recovery action carried by the exception
+                            e.userAction.actionIntent
+                        }
+                        startIntentSenderForResult(
+                            writeRequest.intentSender,
+                            REQUEST_CODE_FAVORITE_UPDATE,
+                            null, 0, 0, 0, null
+                        )
+                    } catch (ex: Exception) {
+                        Log.e("PhotoViewer", "Failed to start permission request", ex)
+                        Toast.makeText(
+                            requireContext(),
+                            "Failed to request permission: ${ex.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        pendingFavoritePhoto = null
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("PhotoViewer", "Failed to update IS_FAVORITE for photo ${devicePhoto.id}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        requireContext(),
+                        "Failed to update favorite: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                pendingFavoritePhoto = null
             }
         }
     }

@@ -39,10 +39,10 @@ class PhotoViewerAdapter(
                         .fitCenter())
                     .into(binding.fullPhoto)
             } else {
-                // No URI - set black background
+                // No URI - set dark grey background
                 binding.fullPhoto.setImageDrawable(null)
                 binding.fullPhoto.setBackgroundColor(
-                    binding.root.context.getColor(android.R.color.black)
+                    binding.root.context.getColor(R.color.photo_background)
                 )
             }
             

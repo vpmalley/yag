@@ -3,8 +3,13 @@ package fr.vpm.yag
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -31,6 +36,8 @@ class MainActivity : AppCompatActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels { getSettingsViewModelFactory() }
     private val deviceAlbumViewModel: DeviceAlbumViewModel by viewModels()
 
+    private val photoDestinations = setOf(R.id.albumDetailFragment, R.id.photoViewerFragment)
+
     fun setToolbarVisibility(visible: Boolean) {
         binding.toolbar.visibility = if (visible) View.VISIBLE else View.GONE
     }
@@ -50,8 +57,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Edge-to-edge: draw behind the status and navigation bars
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        applySystemBarInsets()
 
         val navView: BottomNavigationView = binding.navView
 
@@ -69,9 +80,38 @@ class MainActivity : AppCompatActivity() {
         )
         binding.toolbar.setupWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+
+        // Photo screens use a dark grey that extends behind the toolbar and system bars
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id in photoDestinations) {
+                binding.root.setBackgroundColor(getColor(R.color.photo_background))
+            } else {
+                binding.root.background = null
+            }
+        }
         
         // Scan device for photos at app startup
         scanDeviceAlbums()
+    }
+
+    private fun applySystemBarInsets() {
+        // The BottomNavigationView pads itself for the navigation bar.
+        // Margins on gone views are ignored, so the photo viewer still goes full screen.
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            binding.toolbar.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                topMargin = bars.top
+                leftMargin = bars.left
+                rightMargin = bars.right
+            }
+            binding.navHostFragmentActivityMain.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                leftMargin = bars.left
+                rightMargin = bars.right
+            }
+            insets
+        }
     }
 
     private fun scanDeviceAlbums() {

@@ -9,7 +9,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:adjustViewBounds="true"
-        android:background="@android:color/black"
+        android:background="@color/photo_background"
         android:contentDescription="photo"
         android:scaleType="fitCenter" />
 

@@ -11,4 +11,8 @@
     
     <!-- Photo count text color - slightly less white for secondary information -->
     <color name="white_80">#E0FFFFFF</color>
+
+
+    <!-- Dark grey behind photos (album grid, photo viewer) - softer on the eyes than pure black -->
+    <color name="photo_background">#FF242424</color>
 </resources>

@@ -386,6 +386,25 @@ class AlbumDetailViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Called when a photo's favorite status has been changed in MediaStore
+     * Updates the local photo object and refreshes the display
+     */
+    fun onPhotoFavoriteChanged(updatedPhoto: DevicePhoto) {
+        // Update the photo in the allPhotos list
+        val currentAllPhotos = _allPhotos.value ?: emptyList()
+        val updatedPhotos = currentAllPhotos.map { photo ->
+            if (photo is DevicePhoto && photo.id == updatedPhoto.id) {
+                // Return the updated photo with the new favorite status
+                updatedPhoto
+            } else {
+                photo
+            }
+        }
+        _allPhotos.value = updatedPhotos
+        updateDisplayPhotos()
+    }
+
     companion object {
         private val DEFAULT_SORT_ORDER = SortOrder.NAME_DESCENDING
     }
