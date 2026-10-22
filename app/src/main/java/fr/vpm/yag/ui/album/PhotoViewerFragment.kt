@@ -23,6 +23,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.children
 import androidx.core.widget.NestedScrollView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -221,6 +222,13 @@ class PhotoViewerFragment : Fragment() {
                 currentPhotoPosition = position
                 // Reset parallax effect when page changes
                 resetParallaxEffect()
+                // Photos swiped away are shown unzoomed when coming back to them
+                val recyclerView = viewPager.getChildAt(0) as? RecyclerView ?: return
+                val currentView = currentPhotoView()
+                recyclerView.children
+                    .mapNotNull { it.findViewById<ZoomableImageView>(R.id.fullPhoto) }
+                    .filter { it != currentView }
+                    .forEach { it.resetZoom() }
             }
         })
     }
@@ -641,6 +649,14 @@ class PhotoViewerFragment : Fragment() {
                             bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN &&
                             (view as? ZoomableImageView)?.isZoomed() != true &&
                             event.rawY > viewPagerBottom - (viewPager.height / 3)
+                    false
+                }
+
+                MotionEvent.ACTION_POINTER_DOWN -> {
+                    // A second finger means a pinch, not a swipe up
+                    if (!swipeDirectionDecided) {
+                        touchStartedInSwipeUpZone = false
+                    }
                     false
                 }
 

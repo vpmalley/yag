@@ -67,11 +67,7 @@ class PhotoViewerAdapter(
                     }
                 }
             )
-            
-            // Also keep the click listener for compatibility
-            binding.fullPhoto.setOnClickListener {
-                onPhotoClick()
-            }
+
             
             // Handle favorite button
             if (devicePhoto != null) {
