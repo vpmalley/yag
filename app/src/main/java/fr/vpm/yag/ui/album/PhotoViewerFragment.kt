@@ -10,6 +10,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -41,6 +42,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.net.toUri
 
 class PhotoViewerFragment : Fragment() {
 
@@ -59,9 +61,16 @@ class PhotoViewerFragment : Fragment() {
     // Full screen mode flag
     private var isFullScreen = false
 
-    // Request code for favorite update permission
+    // Request codes for favorite update permission
     private companion object {
         private const val REQUEST_CODE_FAVORITE_UPDATE = 1001
+        private const val REQUEST_CODE_MANAGE_MEDIA = 1002
+
+        // The URIs travel inside the PendingIntent, so cap them to stay under the binder size limit
+        private const val MAX_WRITE_REQUEST_URIS = 500
+
+        // Offer media management access at most once per app run, so declining doesn't nag
+        private var mediaManagementOffered = false
     }
 
     // Pending favorite update state (for handling permission result)
@@ -98,7 +107,9 @@ class PhotoViewerFragment : Fragment() {
         val albumId = args.albumId
         val initialPosition = args.photoPosition
         val filterModeOrdinal = args.filterMode
-        val initialFilterMode = AlbumDetailViewModel.FilterMode.values().getOrNull(filterModeOrdinal) ?: AlbumDetailViewModel.FilterMode.NONE
+        val initialFilterMode =
+            AlbumDetailViewModel.FilterMode.values().getOrNull(filterModeOrdinal)
+                ?: AlbumDetailViewModel.FilterMode.NONE
 
         val album = findAlbumById(albumId)
 
@@ -146,6 +157,12 @@ class PhotoViewerFragment : Fragment() {
                     Toast.LENGTH_SHORT
                 ).show()
                 pendingFavoritePhoto = null
+            }
+        } else if (requestCode == REQUEST_CODE_MANAGE_MEDIA) {
+            // The settings screen gives no meaningful result code: just retry. If access was
+            // granted the write request goes through silently, otherwise it asks for the album
+            pendingFavoritePhoto?.let { devicePhoto ->
+                updateFavoriteInMediaStore(devicePhoto, pendingFavoriteState)
             }
         }
     }
@@ -240,10 +257,10 @@ class PhotoViewerFragment : Fragment() {
                 )
 
                 Log.d("PhotoViewer", "Successfully updated IS_FAVORITE for photo ${devicePhoto.id}")
-                
+
                 // Clear any pending favorite update
                 pendingFavoritePhoto = null
-                
+
             } catch (e: SecurityException) {
                 // RecoverableSecurityException only exists on API 29+, so it can't be named in a
                 // catch clause with minSdk 23: catch its parent and check the type behind a version guard
@@ -270,35 +287,85 @@ class PhotoViewerFragment : Fragment() {
         pendingFavoritePhoto = devicePhoto
         pendingFavoriteState = isFavorite
 
-        // Both APIs give a PendingIntent asking the user to allow the write;
-        // the result comes back in onActivityResult with REQUEST_CODE_FAVORITE_UPDATE
         withContext(Dispatchers.Main) {
-            try {
-                val writeRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    // Android 11+: Use MediaStore.createWriteRequest
-                    MediaStore.createWriteRequest(
-                        requireContext().contentResolver,
-                        listOf(contentUri)
-                    )
-                } else {
-                    // Android 10: Use the recovery action carried by the exception
-                    e.userAction.actionIntent
-                }
-                startIntentSenderForResult(
-                    writeRequest.intentSender,
-                    REQUEST_CODE_FAVORITE_UPDATE,
-                    null, 0, 0, 0, null
-                )
-            } catch (ex: Exception) {
-                Log.e("PhotoViewer", "Failed to start permission request", ex)
-                Toast.makeText(
-                    requireContext(),
-                    "Failed to request permission: ${ex.message}",
-                    Toast.LENGTH_LONG
-                ).show()
-                pendingFavoritePhoto = null
+            if (shouldOfferMediaManagement()) {
+                offerMediaManagement(e, contentUri)
+            } else {
+                launchFavoriteWriteRequest(e, contentUri)
             }
         }
+    }
+
+    private fun shouldOfferMediaManagement(): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                !mediaManagementOffered &&
+                !MediaStore.canManageMedia(requireContext())
+
+    @RequiresApi(Build.VERSION_CODES.S)
+    private fun offerMediaManagement(e: RecoverableSecurityException, contentUri: Uri) {
+        mediaManagementOffered = true
+        android.app.AlertDialog.Builder(requireContext())
+            .setTitle("Stop asking for each photo?")
+            .setMessage(
+                "Android asks before the app changes a photo. Allow YAG to manage media " +
+                        "in the settings and favourites will be updated without asking."
+            )
+            .setPositiveButton("Open settings") { _, _ ->
+                // The result comes back in onActivityResult with REQUEST_CODE_MANAGE_MEDIA
+                val intent = Intent(
+                    Settings.ACTION_REQUEST_MANAGE_MEDIA,
+                    "package:${requireContext().packageName}".toUri()
+                )
+                try {
+                    startActivityForResult(intent, REQUEST_CODE_MANAGE_MEDIA)
+                } catch (ex: Exception) {
+                    Log.e("PhotoViewer", "Failed to open media management settings", ex)
+                    launchFavoriteWriteRequest(e, contentUri)
+                }
+            }
+            .setNegativeButton("Not now") { _, _ ->
+                launchFavoriteWriteRequest(e, contentUri)
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun launchFavoriteWriteRequest(e: RecoverableSecurityException, contentUri: Uri) {
+        // Both APIs give a PendingIntent asking the user to allow the write;
+        // the result comes back in onActivityResult with REQUEST_CODE_FAVORITE_UPDATE
+        try {
+            val writeRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                // Android 11+: Use MediaStore.createWriteRequest, granted silently with media management
+                MediaStore.createWriteRequest(
+                    requireContext().contentResolver,
+                    albumWriteUris(contentUri)
+                )
+            } else {
+                // Android 10: Use the recovery action carried by the exception
+                e.userAction.actionIntent
+            }
+            startIntentSenderForResult(
+                writeRequest.intentSender,
+                REQUEST_CODE_FAVORITE_UPDATE,
+                null, 0, 0, 0, null
+            )
+        } catch (ex: Exception) {
+            Log.e("PhotoViewer", "Failed to start permission request", ex)
+            Toast.makeText(
+                requireContext(),
+                "Failed to request permission: ${ex.message}",
+                Toast.LENGTH_LONG
+            ).show()
+            pendingFavoritePhoto = null
+        }
+    }
+
+    // Ask for the whole album in one dialog, so the next favourites in it don't prompt again
+    private fun albumWriteUris(contentUri: Uri): List<Uri> {
+        val albumUris = albumDetailViewModel.currentAlbum.value?.photos.orEmpty()
+            .mapNotNull { (it as? DevicePhoto)?.uri }
+        return (listOf(contentUri) + albumUris).distinct().take(MAX_WRITE_REQUEST_URIS)
     }
 
     private suspend fun showFavoriteUpdateError(devicePhoto: DevicePhoto, e: Exception) {
@@ -522,7 +589,12 @@ class PhotoViewerFragment : Fragment() {
                     BottomSheetBehavior.STATE_SETTLING -> if (!isBottomSheetExpanded) {
                         bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                     }
-                    BottomSheetBehavior.STATE_EXPANDED -> binding.root.post { applyParallaxEffect(bottomSheet) }
+
+                    BottomSheetBehavior.STATE_EXPANDED -> binding.root.post {
+                        applyParallaxEffect(
+                            bottomSheet
+                        )
+                    }
                 }
             }
         }
@@ -566,9 +638,9 @@ class PhotoViewerFragment : Fragment() {
                     viewPager.getLocationOnScreen(location)
                     val viewPagerBottom = location[1] + viewPager.height
                     touchStartedInSwipeUpZone = ::bottomSheetBehavior.isInitialized &&
-                        bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN &&
-                        (view as? ZoomableImageView)?.isZoomed() != true &&
-                        event.rawY > viewPagerBottom - (viewPager.height / 3)
+                            bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN &&
+                            (view as? ZoomableImageView)?.isZoomed() != true &&
+                            event.rawY > viewPagerBottom - (viewPager.height / 3)
                     false
                 }
 
@@ -587,7 +659,8 @@ class PhotoViewerFragment : Fragment() {
                             // Prevent ViewPager2 from stealing the rest of the gesture as a page swipe
                             view.parent?.requestDisallowInterceptTouchEvent(true)
                             // Cancel the image's own gesture handling so the release isn't seen as a tap
-                            val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
+                            val cancel = MotionEvent.obtain(event)
+                                .apply { action = MotionEvent.ACTION_CANCEL }
                             view.onTouchEvent(cancel)
                             cancel.recycle()
                         }

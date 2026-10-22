@@ -33,5 +33,9 @@
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
 
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Android 12+: once granted in the settings, write requests no longer ask the user -->
+    <uses-permission
+        android:name="android.permission.MANAGE_MEDIA"
+        tools:ignore="ProtectedPermissions" />
 
 </manifest>
