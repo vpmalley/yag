@@ -189,6 +189,16 @@ class AlbumDetailFragment : Fragment() {
         // Observe changes to display photos and update adapter
         albumDetailViewModel.displayPhotos.observe(viewLifecycleOwner) { photos ->
             photoGridAdapter.submitList(photos)
+            // Show empty state if no photos match the filter
+            val emptyStateLayout = binding.emptyStateLayout
+            val recyclerView = binding.recyclerViewPhotos
+            if (photos.isEmpty()) {
+                emptyStateLayout.visibility = View.VISIBLE
+                recyclerView.visibility = View.GONE
+            } else {
+                emptyStateLayout.visibility = View.GONE
+                recyclerView.visibility = View.VISIBLE
+            }
         }
         
         // Observe selection state changes to refresh the selection overlays

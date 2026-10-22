@@ -54,4 +54,7 @@
 
     <!-- Photo count -->
     <string name="photo_count">%1$d photos</string>
+    
+    <!-- Empty state -->
+    <string name="no_photos_match_filter">No photos match this filter</string>
 </resources>

@@ -154,4 +154,34 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/headerContainer" />
 
+    <!-- Empty state view - shown when no photos match the filter -->
+    <LinearLayout
+        android:id="@+id/emptyStateLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/headerContainer">
+
+        <ImageView
+            android:id="@+id/emptyStateIcon"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginBottom="16dp"
+            android:src="@drawable/ic_filter_white_24"
+            android:tint="@color/white_80" />
+
+        <TextView
+            android:id="@+id/emptyStateText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/no_photos_match_filter"
+            android:textColor="@color/white_80"
+            android:textSize="16sp" />
+    </LinearLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
