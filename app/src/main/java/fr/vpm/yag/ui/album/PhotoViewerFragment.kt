@@ -31,7 +31,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.chip.Chip
 import fr.vpm.yag.MainActivity
 import fr.vpm.yag.R
 import fr.vpm.yag.databinding.FragmentPhotoViewerBinding
@@ -779,12 +778,13 @@ class PhotoViewerFragment : Fragment() {
                 val photoName = bottomSheetView.findViewById<TextView>(R.id.photoName)
                 val photoPath = bottomSheetView.findViewById<TextView>(R.id.photoPath)
                 val fileSize = bottomSheetView.findViewById<TextView>(R.id.fileSize)
+                val dateTaken = bottomSheetView.findViewById<TextView>(R.id.dateTaken)
+                val cameraModel = bottomSheetView.findViewById<TextView>(R.id.cameraModel)
+                val lensModel = bottomSheetView.findViewById<TextView>(R.id.lensModel)
                 val focalLength = bottomSheetView.findViewById<TextView>(R.id.focalLength)
                 val shutterSpeed = bottomSheetView.findViewById<TextView>(R.id.shutterSpeed)
                 val aperture = bottomSheetView.findViewById<TextView>(R.id.aperture)
                 val iso = bottomSheetView.findViewById<TextView>(R.id.iso)
-                val exifTagsContainer =
-                    bottomSheetView.findViewById<ViewGroup>(R.id.exifTagsContainer)
 
                 // Set basic photo info
                 photoName.text = photo.displayName ?: "Unknown"
@@ -804,48 +804,19 @@ class PhotoViewerFragment : Fragment() {
                     } ?: ExifUtils.ExifData()
 
                     withContext(Dispatchers.Main) {
-                        // Update EXIF fields
+                        // Update new EXIF fields
+                        dateTaken.text = exifData.dateTaken
+                        cameraModel.text = exifData.cameraModel
+                        lensModel.text = exifData.lensModel
+
+                        // Update existing EXIF fields
                         focalLength.text = exifData.focalLength
                         shutterSpeed.text = exifData.shutterSpeed
                         aperture.text = exifData.aperture
                         iso.text = exifData.iso
-
-                        // Update EXIF tags
-                        updateExifTags(exifTagsContainer, exifData)
                     }
                 }
             }
-        }
-    }
-
-    private fun updateExifTags(container: ViewGroup, exifData: ExifUtils.ExifData) {
-        // Clear existing chips
-        container.removeAllViews()
-
-        // Get the list of EXIF tags
-        val tags = ExifUtils.getExifTagList(exifData)
-
-        // Create chips for each tag
-        tags.forEach { tag ->
-            val chip = LayoutInflater.from(requireContext())
-                .inflate(R.layout.item_exif_chip, container, false) as Chip
-            chip.text = tag
-            chip.setOnClickListener {
-                // Optional: show more details when chip is clicked
-                val fullTagName = "TAG_$tag"
-                val tagValue = exifData.allTags[fullTagName] ?: "N/A"
-                Toast.makeText(requireContext(), "$tag: $tagValue", Toast.LENGTH_SHORT).show()
-            }
-            container.addView(chip)
-        }
-
-        // If no tags, show a message
-        if (tags.isEmpty()) {
-            val noTagsText = TextView(requireContext())
-            noTagsText.text = "No EXIF tags found"
-            noTagsText.setTextColor(0x80FFFFFF.toInt())
-            noTagsText.textSize = 12f
-            container.addView(noTagsText)
         }
     }
 

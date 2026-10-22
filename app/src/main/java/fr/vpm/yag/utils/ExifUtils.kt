@@ -101,6 +101,40 @@ object ExifUtils {
                 exifData.isoRaw = iso
             }
 
+            // Get date taken - try multiple tags with fallback chain
+            var dateTaken: String? = null
+            val dateTags = listOf(
+                ExifInterface.TAG_DATETIME_ORIGINAL,
+                ExifInterface.TAG_DATETIME_DIGITIZED,
+                ExifInterface.TAG_DATETIME
+            )
+            for (tag in dateTags) {
+                dateTaken = exifInterface.getAttribute(tag)
+                if (dateTaken != null) {
+                    exifData.dateTaken = parseDateTaken(dateTaken)
+                    exifData.dateTakenRaw = dateTaken
+                    break
+                }
+            }
+
+            // Get camera make and model
+            val cameraMake = exifInterface.getAttribute(ExifInterface.TAG_MAKE)
+            val cameraModel = exifInterface.getAttribute(ExifInterface.TAG_MODEL)
+            val cameraModelParsed = parseCameraModel(cameraMake, cameraModel)
+            if (cameraModelParsed != "-") {
+                exifData.cameraModel = cameraModelParsed
+                exifData.cameraModelRaw = cameraMake ?: cameraModel
+            }
+
+            // Get lens model
+            val lensMake = exifInterface.getAttribute("LensMake")
+            val lensModelTag = exifInterface.getAttribute("LensModel")
+            val lensModelParsed = parseLensModel(lensMake, lensModelTag)
+            if (lensModelParsed != "-") {
+                exifData.lensModel = lensModelParsed
+                exifData.lensModelRaw = lensMake ?: lensModelTag
+            }
+
             // Get all EXIF tags - use a predefined list of common tags
             exifData.allTags = mutableMapOf()
             val commonTags = listOf(
@@ -113,6 +147,8 @@ object ExifUtils {
                 ExifInterface.TAG_DATETIME_DIGITIZED,
                 ExifInterface.TAG_MAKE,
                 ExifInterface.TAG_MODEL,
+                "LensMake",
+                "LensModel",
                 ExifInterface.TAG_ORIENTATION,
                 ExifInterface.TAG_WHITE_BALANCE,
                 ExifInterface.TAG_FLASH,
@@ -245,6 +281,60 @@ object ExifUtils {
     }
 
     /**
+     * Parses date taken from EXIF format (e.g., "2024:10:15 14:30:45" -> "Oct 15, 2024 14:30")
+     * Tries multiple date tags with fallback chain: DATETIME_ORIGINAL -> DATETIME_DIGITIZED -> DATETIME
+     */
+    private fun parseDateTaken(dateString: String): String {
+        return try {
+            // EXIF date format: "yyyy:MM:dd HH:mm:ss"
+            val parts = dateString.split(":", " ")
+            if (parts.size >= 6) {
+                val year = parts[0]
+                val month = parts[1].toInt()
+                val day = parts[2].toInt()
+                val hour = parts[3]
+                val minute = parts[4]
+
+                val monthNames = arrayOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+                val monthName = if (month in 1..12) monthNames[month - 1] else "???"
+
+                "$monthName $day, $year $hour:$minute"
+            } else {
+                dateString
+            }
+        } catch (e: Exception) {
+            dateString
+        }
+    }
+
+    /**
+     * Parses camera model from EXIF format
+     * Combines TAG_MAKE and TAG_MODEL if both are available
+     */
+    private fun parseCameraModel(make: String?, model: String?): String {
+        return when {
+            make != null && model != null -> "$make $model"
+            make != null -> make
+            model != null -> model
+            else -> "-"
+        }
+    }
+
+    /**
+     * Parses lens model from EXIF format
+     * Tries to combine TAG_LENS_MAKE and TAG_LENS_MODEL if both are available
+     */
+    private fun parseLensModel(lensMake: String?, lensModel: String?): String {
+        return when {
+            lensMake != null && lensModel != null -> "$lensMake $lensModel"
+            lensMake != null -> lensMake
+            lensModel != null -> lensModel
+            else -> "-"
+        }
+    }
+
+    /**
      * Gets a list of EXIF tag names that are present in the image.
      */
     fun getExifTagList(exifData: ExifData): List<String> {
@@ -293,6 +383,12 @@ object ExifUtils {
         var apertureRaw: String? = null,
         var iso: String = "-",
         var isoRaw: String? = null,
+        var dateTaken: String = "-",
+        var dateTakenRaw: String? = null,
+        var cameraModel: String = "-",
+        var cameraModelRaw: String? = null,
+        var lensModel: String = "-",
+        var lensModelRaw: String? = null,
         var allTags: MutableMap<String, String> = mutableMapOf()
     )
 }
