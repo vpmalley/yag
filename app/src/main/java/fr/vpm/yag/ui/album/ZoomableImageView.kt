@@ -61,6 +61,7 @@ class ZoomableImageView @JvmOverloads constructor(
     fun resetZoom() {
         zoomMatrix.reset()
         applyMatrix()
+        zoomListener?.onZoomChanged(getCurrentScale())
     }
 
     fun getCurrentScale(): Float {
@@ -81,9 +82,10 @@ class ZoomableImageView @JvmOverloads constructor(
     // The scale type is always MATRIX: fitting is handled by baseMatrix
     override fun setScaleType(scaleType: ScaleType?) {}
 
+    // The zoom is kept, so a higher resolution version of the same image can be swapped in while zoomed.
+    // Call resetZoom() when showing a different image.
     override fun setImageDrawable(drawable: Drawable?) {
         super.setImageDrawable(drawable)
-        zoomMatrix.reset()
         updateBaseMatrix()
     }
 
@@ -206,7 +208,6 @@ class ZoomableImageView @JvmOverloads constructor(
             zoomListener?.onDoubleTap()
             if (isZoomed()) {
                 resetZoom()
-                zoomListener?.onZoomChanged(getCurrentScale())
             } else {
                 zoomTo(doubleTapScale, e.x, e.y)
             }
