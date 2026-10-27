@@ -19,6 +19,11 @@ class AlbumDetailViewModel : ViewModel() {
     private val _allPhotos = MutableLiveData<List<Photo>>()
     val allPhotos: LiveData<List<Photo>> = _allPhotos
 
+    // Photos deleted in this session. They stay filtered out of the collection even
+    // when the album is re-scanned from the Media Store, because the trash request
+    // may not be confirmed yet when the re-scan runs.
+    private val deletedPhotoIds = mutableSetOf<Long>()
+
     // Display photos list (sorted and filtered)
     private val _displayPhotos = MutableLiveData<List<Photo>>()
     val displayPhotos: LiveData<List<Photo>> = _displayPhotos
@@ -72,7 +77,9 @@ class AlbumDetailViewModel : ViewModel() {
     fun setAlbum(album: Album?) {
         _currentAlbum.value = album
         if (album != null) {
-            _allPhotos.value = album.photos
+            _allPhotos.value = album.photos.filterNot { photo ->
+                (photo as? DevicePhoto)?.id in deletedPhotoIds
+            }
             updateDisplayPhotos()
         } else {
             _allPhotos.value = emptyList()
@@ -384,6 +391,22 @@ class AlbumDetailViewModel : ViewModel() {
         return allPhotos.filter { photo ->
             selectedIds.contains((photo as? DevicePhoto)?.id)
         }
+    }
+
+    /**
+     * Called when photos have been deleted (moved to trash) from the album.
+     * Filters them out of the collection and refreshes the display
+     */
+    fun removePhotos(photoIds: Collection<Long>) {
+        if (photoIds.isEmpty()) return
+        deletedPhotoIds += photoIds
+        val currentAllPhotos = _allPhotos.value ?: emptyList()
+        _allPhotos.value = currentAllPhotos.filterNot { photo ->
+            (photo as? DevicePhoto)?.id in deletedPhotoIds
+        }
+        // Deleted photos can't stay selected
+        _selectedPhotoIds.value = (_selectedPhotoIds.value ?: emptySet()) - deletedPhotoIds
+        updateDisplayPhotos()
     }
 
     /**

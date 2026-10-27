@@ -89,6 +89,7 @@ class AlbumDetailFragment : Fragment() {
             setupAlbumHeader(album)
             setupRecyclerView()
             setupFilterChips()
+            observeMediaStoreRefresh()
             // Reset scroll state when album changes
             resetScrollState()
 
@@ -528,7 +529,9 @@ class AlbumDetailFragment : Fragment() {
         
         val count = photosToDelete.size
         movePhotosToTrash(photosToDelete)
-        
+        // Filter the deleted photos out of the collection and re-scan the album
+        onPhotosDeleted(photosToDelete)
+
         // Exit selection mode after deletion
         albumDetailViewModel.setSelectionMode(false)
         
@@ -568,8 +571,40 @@ class AlbumDetailFragment : Fragment() {
         
         // Move to recycle bin/trash
         movePhotosToTrash(nonFavoritePhotos)
-        
+        // Filter the deleted photos out of the collection and re-scan the album
+        onPhotosDeleted(nonFavoritePhotos)
+
         Toast.makeText(requireContext(), getString(R.string.moved_non_favorites_to_recycle_bin, count), Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Called after photos have been moved to the trash: filters them out of the
+     * displayed collection right away, then re-scans the album from the Media Store.
+     * The adapter is updated through the displayPhotos observer, immediately by the
+     * filter and again when the fresh MediaStore scan completes.
+     */
+    private fun onPhotosDeleted(deletedPhotos: List<Photo>) {
+        val deletedIds = deletedPhotos.mapNotNull { photo ->
+            (photo as? DevicePhoto)?.id
+        }
+        if (deletedIds.isEmpty()) return
+        albumDetailViewModel.removePhotos(deletedIds)
+        deviceAlbumViewModel.refreshAlbums(requireContext().applicationContext)
+    }
+
+    /**
+     * Observe MediaStore re-scans: when a fresh scan contains the current album,
+     * update the collection and the adapter accordingly.
+     */
+    private fun observeMediaStoreRefresh() {
+        deviceAlbumViewModel.albums.observe(viewLifecycleOwner) { albums ->
+            val freshAlbum = albums.firstOrNull { it.id == args.albumId } ?: return@observe
+            albumDetailViewModel.setAlbum(freshAlbum)
+            if (!albumDetailViewModel.isSelectionModeActive()) {
+                val activity = requireActivity() as? MainActivity
+                activity?.setToolbarSubtitle(getString(R.string.photo_count, freshAlbum.photos.size))
+            }
+        }
     }
 
     private fun movePhotosToTrash(photos: List<Photo>) {
