@@ -10,6 +10,7 @@
 
     <!-- Album Detail -->
     <string name="unknown_album">Unknown Album</string>
+    <string name="album_not_found">Album not found</string>
     <string name="select_photos">Select photos</string>
     <string name="selected_count">%1$d selected</string>
     <string name="no_photos_selected">No photos selected</string>

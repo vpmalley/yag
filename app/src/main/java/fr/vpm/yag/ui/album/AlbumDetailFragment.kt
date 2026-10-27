@@ -13,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.GridLayoutManager
@@ -90,10 +91,23 @@ class AlbumDetailFragment : Fragment() {
             setupFilterChips()
             // Reset scroll state when album changes
             resetScrollState()
+
+            // Setup back press callback to handle back button when in selection mode
+            setupBackPressHandler()
+        } else {
+            // The library has not been scanned yet (e.g. the process was recreated while
+            // the app was in the background) or the album no longer exists. Redirect to
+            // Home, which reflects the ongoing library scan.
+            navigateToHome()
         }
-        
-        // Setup back press callback to handle back button when in selection mode
-        setupBackPressHandler()
+    }
+
+    private fun navigateToHome() {
+        Toast.makeText(requireContext(), R.string.album_not_found, Toast.LENGTH_SHORT).show()
+        val navOptions = NavOptions.Builder()
+            .setPopUpTo(R.id.navigation_home, true)
+            .build()
+        findNavController().navigate(R.id.navigation_home, null, navOptions)
     }
 
     private fun setupBackPressHandler() {
