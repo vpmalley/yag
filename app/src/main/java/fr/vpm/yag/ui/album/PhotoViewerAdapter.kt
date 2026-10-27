@@ -32,10 +32,11 @@ class PhotoViewerAdapter(
 
     private var photos: List<Photo> = emptyList()
 
-    inner class PhotoViewHolder(private val binding: ItemPhotoViewerBinding) : 
+    inner class PhotoViewHolder(private val binding: ItemPhotoViewerBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
         private var uri: Uri? = null
+
         // Set while the high-res photo is loading or shown
         private var highResTarget: CustomTarget<Drawable>? = null
 
@@ -51,6 +52,7 @@ class PhotoViewerAdapter(
                             loadPhoto(highRes = false)
                         }
                     }
+
                     override fun onZoomEnded() {}
                     override fun onDoubleTap() {}
                     override fun onSingleTap() {
@@ -76,10 +78,10 @@ class PhotoViewerAdapter(
                     binding.root.context.getColor(R.color.photo_background)
                 )
             }
-            
+
             // Notify that this photo has been loaded
             onPhotoLoaded(position, binding.fullPhoto)
-            
+
             // Show RAW badge if photo has RAW extension
             if (devicePhoto != null) {
                 updateRawBadge(devicePhoto)
@@ -95,14 +97,14 @@ class PhotoViewerAdapter(
                     onFavoriteClick(devicePhoto, newFavoriteState)
                 }
             }
-            
+
             // Handle share button
             if (devicePhoto != null) {
                 binding.shareButton.setOnClickListener {
                     onShareClick(devicePhoto)
                 }
             }
-            
+
             // Handle delete button
             if (devicePhoto != null) {
                 binding.deleteButton.setOnClickListener {
@@ -110,13 +112,15 @@ class PhotoViewerAdapter(
                 }
             }
         }
-        
+
         private fun screenSizeRequest(uri: Uri) =
             Glide.with(binding.root.context)
                 .load(uri)
-                .apply(RequestOptions()
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .fitCenter())
+                .apply(
+                    RequestOptions()
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .fitCenter()
+                )
 
         private fun loadPhoto(highRes: Boolean) {
             val uri = uri ?: return
@@ -128,7 +132,10 @@ class PhotoViewerAdapter(
             val target = object : CustomTarget<Drawable>() {
                 private var shown: Drawable? = null
 
-                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                override fun onResourceReady(
+                    resource: Drawable,
+                    transition: Transition<in Drawable>?
+                ) {
                     Glide.with(binding.root.context).clear(binding.fullPhoto)
                     shown = resource
                     binding.fullPhoto.setImageDrawable(resource)
@@ -145,15 +152,21 @@ class PhotoViewerAdapter(
             highResTarget = target
             Glide.with(binding.root.context)
                 .load(uri)
-                .apply(RequestOptions()
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .override(HIGH_RES_MAX_SIZE)
-                    .downsample(DownsampleStrategy.CENTER_INSIDE))
+                .apply(
+                    RequestOptions()
+                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                        .override(HIGH_RES_MAX_SIZE)
+                        .downsample(DownsampleStrategy.CENTER_INSIDE)
+                )
                 .into(target)
         }
 
         private fun loadScreenSize(uri: Uri) {
-            val highRes = highResTarget ?: return
+            val highRes = highResTarget
+            if (highRes == null) {
+                screenSizeRequest(uri).into(binding.fullPhoto)
+                return
+            }
             highResTarget = null
             val highResDrawable = binding.fullPhoto.drawable
             if (highRes.request?.isComplete != true) {
@@ -197,9 +210,10 @@ class PhotoViewerAdapter(
 
         private fun updateRawBadge(devicePhoto: DevicePhoto) {
             val isRaw = devicePhoto.isRawPhoto()
-            binding.rawBadge.visibility = if (isRaw) android.view.View.VISIBLE else android.view.View.GONE
+            binding.rawBadge.visibility =
+                if (isRaw) android.view.View.VISIBLE else android.view.View.GONE
         }
-        
+
         private fun updateFavoriteButton(devicePhoto: DevicePhoto) {
             if (devicePhoto.isFavorite) {
                 binding.favoriteButton.setImageResource(R.drawable.ic_heart_filled)
@@ -211,8 +225,8 @@ class PhotoViewerAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoViewHolder {
         val binding = ItemPhotoViewerBinding.inflate(
-            LayoutInflater.from(parent.context), 
-            parent, 
+            LayoutInflater.from(parent.context),
+            parent,
             false
         )
         return PhotoViewHolder(binding)
@@ -235,6 +249,7 @@ class PhotoViewerAdapter(
 
     companion object {
         private const val HIGH_RES_ZOOM_THRESHOLD = 1.5f
+
         // Keeps a high-res bitmap around 48-64 MB, within what the canvas can draw
         private const val HIGH_RES_MAX_SIZE = 4096
     }
