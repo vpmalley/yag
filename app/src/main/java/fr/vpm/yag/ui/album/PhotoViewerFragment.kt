@@ -109,7 +109,7 @@ class PhotoViewerFragment : Fragment() {
         val initialPosition = args.photoPosition
         val filterModeOrdinal = args.filterMode
         val initialFilterMode =
-            AlbumDetailViewModel.FilterMode.values().getOrNull(filterModeOrdinal)
+            AlbumDetailViewModel.FilterMode.entries.getOrNull(filterModeOrdinal)
                 ?: AlbumDetailViewModel.FilterMode.NONE
 
         val album = findAlbumById(albumId)
