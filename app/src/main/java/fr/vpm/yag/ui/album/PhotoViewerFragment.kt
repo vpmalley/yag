@@ -83,6 +83,9 @@ class PhotoViewerFragment : Fragment() {
     private var bottomSheetView: View? = null
     private var currentPhotoPosition: Int = 0
     private var isBottomSheetExpanded = false
+    // True only while a deliberate swipe-up is opening the sheet; lets layout changes
+    // caused by a tap (fullscreen toggle) re-target the sheet without ever showing it
+    private var isSheetOpening = false
 
     // Parallax effect variables
     private var initialTouchY = 0f
@@ -562,6 +565,9 @@ class PhotoViewerFragment : Fragment() {
             ViewGroup.LayoutParams.MATCH_PARENT
         )
         binding.root.addView(bottomSheetView, layoutParams)
+        // Keep the sheet container gone while hidden: the behavior only offsets it off-screen,
+        // so a transient layout/animation state could still draw it (flicker on tap)
+        bottomSheetView?.visibility = View.GONE
 
         val bottomSheet = bottomSheetView?.findViewById<View>(R.id.bottomSheet)
         Log.d("photo", "bottom sheet set up")
@@ -581,15 +587,21 @@ class PhotoViewerFragment : Fragment() {
                 BottomSheetBehavior.BottomSheetCallback() {
                 override fun onStateChanged(bottomSheet: View, newState: Int) {
                     Log.d("photo", "bottom sheet state changed to $newState")
+                    // Gone while hidden so the sheet can never be drawn or intercept touches;
+                    // visible for every other state so the behavior can animate it
+                    bottomSheetView?.visibility =
+                        if (newState == BottomSheetBehavior.STATE_HIDDEN) View.GONE else View.VISIBLE
                     when (newState) {
                         BottomSheetBehavior.STATE_HIDDEN -> {
                             isBottomSheetExpanded = false
+                            isSheetOpening = false
                             resetParallaxEffect()
                             setFullScreen(wasFullScreenBeforeSheet)
                         }
 
                         BottomSheetBehavior.STATE_EXPANDED -> {
                             isBottomSheetExpanded = true
+                            isSheetOpening = false
                             // Update content when bottom sheet is expanded
                             updateBottomSheetContent(currentPhotoPosition)
                         }
@@ -603,11 +615,13 @@ class PhotoViewerFragment : Fragment() {
             })
 
             // Going full screen when the sheet opens resizes the layout while the sheet is still
-            // animating towards the old expanded position: re-target it, and refit the photo
+            // animating towards the old expanded position: re-target it, and refit the photo.
+            // Only ever re-target while a deliberate swipe-up is opening the sheet, so a
+            // fullscreen toggle caused by a tap can never pop the sheet back open.
             binding.root.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
                 if (bottom - top == oldBottom - oldTop) return@addOnLayoutChangeListener
                 when (bottomSheetBehavior.state) {
-                    BottomSheetBehavior.STATE_SETTLING -> if (!isBottomSheetExpanded) {
+                    BottomSheetBehavior.STATE_SETTLING -> if (isSheetOpening) {
                         bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                     }
 
@@ -765,6 +779,9 @@ class PhotoViewerFragment : Fragment() {
 
     private fun showBottomSheet() {
         if (::bottomSheetBehavior.isInitialized && bottomSheetBehavior.state != BottomSheetBehavior.STATE_EXPANDED) {
+            // The container is gone while hidden: make it visible so the behavior can lay it out
+            bottomSheetView?.visibility = View.VISIBLE
+            isSheetOpening = true
             // Use the whole screen while the details are shown; remember the mode to restore it on hide
             if (bottomSheetBehavior.state == BottomSheetBehavior.STATE_HIDDEN) {
                 wasFullScreenBeforeSheet = isFullScreen
@@ -778,6 +795,7 @@ class PhotoViewerFragment : Fragment() {
 
     private fun hideBottomSheet() {
         if (::bottomSheetBehavior.isInitialized && bottomSheetBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
+            isSheetOpening = false
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
         }
     }
