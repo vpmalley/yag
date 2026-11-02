@@ -25,7 +25,7 @@ class HomeFragment : Fragment() {
     ) { isGranted ->
         if (isGranted) {
             updatePermissionUi()
-            deviceAlbumViewModel.fetchDeviceAlbums(requireContext().applicationContext)
+            deviceAlbumViewModel.loadAlbums(requireContext().applicationContext)
         } else {
             updatePermissionUi()
         }
@@ -48,6 +48,10 @@ class HomeFragment : Fragment() {
         deviceAlbumViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             _binding?.loadingIndicator?.visibility = if (isLoading) View.VISIBLE else View.GONE
             _binding?.buttonFetchMedia?.isEnabled = !isLoading
+        }
+
+        deviceAlbumViewModel.isRefreshing.observe(viewLifecycleOwner) { isRefreshing ->
+            _binding?.refreshIndicator?.visibility = if (isRefreshing) View.VISIBLE else View.GONE
         }
 
         return _binding?.root
@@ -98,7 +102,7 @@ class HomeFragment : Fragment() {
             _binding?.textHome?.text = deviceAlbumViewModel.text.value
             _binding?.buttonFetchMedia?.text = "Scan Device"
             _binding?.buttonFetchMedia?.setOnClickListener {
-                deviceAlbumViewModel.fetchDeviceAlbums(requireContext().applicationContext)
+                deviceAlbumViewModel.refreshAlbums(requireContext().applicationContext)
             }
         } else {
             _binding?.textHome?.text = "This app does not have access to photos and videos. Please grant permission to scan your device."

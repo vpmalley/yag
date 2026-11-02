@@ -13,11 +13,15 @@ import androidx.core.view.updateLayoutParams
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import fr.vpm.yag.cache.AlbumCacheRepository
+import fr.vpm.yag.cache.AlbumDatabase
 import fr.vpm.yag.databinding.ActivityMainBinding
 import fr.vpm.yag.ui.home.DeviceAlbumViewModel
 import fr.vpm.yag.ui.settings.ListFolderViewModel
@@ -34,7 +38,14 @@ class MainActivity : AppCompatActivity() {
     fun getListFolderViewModelFactory() = ListFolderViewModel.Factory(yagDataStore)
 
     private val settingsViewModel: SettingsViewModel by viewModels { getSettingsViewModelFactory() }
-    private val deviceAlbumViewModel: DeviceAlbumViewModel by viewModels()
+
+    private val albumCacheRepository: AlbumCacheRepository by lazy {
+        AlbumCacheRepository(AlbumDatabase.getInstance(applicationContext))
+    }
+
+    private val deviceAlbumViewModel: DeviceAlbumViewModel by viewModels {
+        DeviceAlbumViewModel.Factory(albumCacheRepository)
+    }
 
     fun setToolbarVisibility(visible: Boolean) {
         binding.toolbar.visibility = if (visible) View.VISIBLE else View.GONE
@@ -67,7 +78,7 @@ class MainActivity : AppCompatActivity() {
         val navHostFragment =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment_activity_main) as NavHostFragment
         val navController = navHostFragment.navController
-        
+
         // Set up Toolbar with Navigation Component
         // Set up AppBarConfiguration with top-level destinations
         // The up button will automatically navigate up the back stack for nested fragments
@@ -78,9 +89,31 @@ class MainActivity : AppCompatActivity() {
         )
         binding.toolbar.setupWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
-        
-        // Scan device for photos at app startup
-        scanDeviceAlbums()
+
+        // Cache-first loading: display cached albums immediately, then background refresh
+        lifecycleScope.launch {
+            deviceAlbumViewModel.loadAlbums(applicationContext)
+        }
+
+        // Start periodic refresh while app is active
+        deviceAlbumViewModel.startPeriodicRefresh(applicationContext)
+
+        // Refresh on app resume if last refresh was more than 15 minutes ago
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                deviceAlbumViewModel.refreshOnResume(applicationContext)
+            }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        deviceAlbumViewModel.stopPeriodicRefresh()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        deviceAlbumViewModel.startPeriodicRefresh(applicationContext)
     }
 
     private fun applySystemBarInsets() {
@@ -100,12 +133,6 @@ class MainActivity : AppCompatActivity() {
                 rightMargin = bars.right
             }
             insets
-        }
-    }
-
-    private fun scanDeviceAlbums() {
-        lifecycleScope.launch {
-            deviceAlbumViewModel.fetchDeviceAlbums(applicationContext)
         }
     }
 }
