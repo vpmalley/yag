@@ -24,5 +24,6 @@ data class PhotoEntity(
     val path: String?,
     val displayName: String?,
     val isFavorite: Boolean,
-    val dateAdded: Long
+    val dateAdded: Long,
+    val dateTaken: Long? = null
 )

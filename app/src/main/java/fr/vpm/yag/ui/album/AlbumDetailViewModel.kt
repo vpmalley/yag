@@ -40,17 +40,6 @@ class AlbumDetailViewModel : ViewModel() {
     private val _filterMode = MutableLiveData<FilterMode>()
     val filterMode: LiveData<FilterMode> = _filterMode
 
-    // Sort options
-    enum class SortOrder {
-        DATE_NEWEST_FIRST,
-        DATE_OLDEST_FIRST,
-        NAME_ASCENDING,
-        NAME_DESCENDING
-    }
-
-    private val _sortOrder = MutableLiveData<SortOrder>()
-    val sortOrder: LiveData<SortOrder> = _sortOrder
-
     // Current position for photo viewer
     private val _currentPhotoPosition = MutableLiveData<Int>()
     val currentPhotoPosition: LiveData<Int> = _currentPhotoPosition
@@ -65,7 +54,6 @@ class AlbumDetailViewModel : ViewModel() {
 
     init {
         _filterMode.value = FilterMode.NONE
-        _sortOrder.value = DEFAULT_SORT_ORDER
         _currentPhotoPosition.value = 0
         _selectedPhotoIds.value = emptySet()
         _isSelectionMode.value = false
@@ -125,14 +113,6 @@ class AlbumDetailViewModel : ViewModel() {
     }
 
     /**
-     * Set the sort order for photos
-     */
-    fun setSortOrder(order: SortOrder) {
-        _sortOrder.value = order
-        updateDisplayPhotos()
-    }
-
-    /**
      * Set the current photo position (for photo viewer)
      */
     fun setCurrentPhotoPosition(position: Int) {
@@ -145,42 +125,21 @@ class AlbumDetailViewModel : ViewModel() {
     private fun updateDisplayPhotos() {
         val photos = _allPhotos.value ?: emptyList()
         val filterMode = _filterMode.value ?: FilterMode.NONE
-        val sortOrder = _sortOrder.value ?: DEFAULT_SORT_ORDER
 
         android.util.Log.d(
             "AlbumDetailVM",
-            "Sort order: $sortOrder, Filter: $filterMode, Photo count: ${photos.size}"
+            "Filter: $filterMode, Photo count: ${photos.size}"
         )
 
         // Log original display names
         val originalNames = photos.mapNotNull { (it as? DevicePhoto)?.displayName }
         android.util.Log.d("AlbumDetailVM", "Original displayNames: $originalNames")
 
-        // Apply sorting first
-        val sortedPhotos = when (sortOrder) {
-            SortOrder.DATE_NEWEST_FIRST -> {
-                photos.sortedByDescending { photo ->
-                    (photo as? DevicePhoto)?.additionDate?.time ?: 0L
-                }
-            }
-
-            SortOrder.DATE_OLDEST_FIRST -> {
-                photos.sortedBy { photo ->
-                    (photo as? DevicePhoto)?.additionDate?.time ?: 0L
-                }
-            }
-
-            SortOrder.NAME_ASCENDING -> {
-                photos.sortedBy { photo ->
-                    (photo as? DevicePhoto)?.displayName ?: ""
-                }
-            }
-
-            SortOrder.NAME_DESCENDING -> {
-                photos.sortedByDescending { photo ->
-                    (photo as? DevicePhoto)?.displayName ?: ""
-                }
-            }
+        // Apply sorting first: always by capture date, newest first.
+        // Photos without a capture date (DATE_TAKEN missing/0) fall back to the date added.
+        val sortedPhotos = photos.sortedByDescending { photo ->
+            val devicePhoto = photo as? DevicePhoto
+            (devicePhoto?.dateTaken ?: devicePhoto?.additionDate)?.time ?: 0L
         }
 
         // Log sorted display names
@@ -252,13 +211,6 @@ class AlbumDetailViewModel : ViewModel() {
      */
     fun getFilterMode(): FilterMode {
         return _filterMode.value ?: FilterMode.NONE
-    }
-
-    /**
-     * Get current sort order (convenience method)
-     */
-    fun getCurrentSortOrder(): SortOrder {
-        return _sortOrder.value ?: DEFAULT_SORT_ORDER
     }
 
     /**
@@ -428,7 +380,4 @@ class AlbumDetailViewModel : ViewModel() {
         updateDisplayPhotos()
     }
 
-    companion object {
-        private val DEFAULT_SORT_ORDER = SortOrder.NAME_DESCENDING
-    }
 }

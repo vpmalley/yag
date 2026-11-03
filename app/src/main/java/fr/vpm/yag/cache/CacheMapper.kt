@@ -21,7 +21,8 @@ fun PhotoEntity.toDevicePhoto(): DevicePhoto {
         path = path,
         displayName = displayName,
         additionDate = Date(dateAdded),
-        isFavorite = isFavorite
+        isFavorite = isFavorite,
+        dateTaken = dateTaken?.let { Date(it) }
     )
 }
 
@@ -33,7 +34,8 @@ fun DevicePhoto.toEntity(albumId: String): PhotoEntity {
         path = path,
         displayName = displayName,
         isFavorite = isFavorite,
-        dateAdded = additionDate?.time ?: 0L
+        dateAdded = additionDate?.time ?: 0L,
+        dateTaken = dateTaken?.time
     )
 }
 

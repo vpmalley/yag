@@ -158,7 +158,8 @@ class DeviceAlbumViewModel(
                         path = photo.path,
                         displayName = photo.displayName,
                         additionDate = photo.additionDate,
-                        isFavorite = isFavorite
+                        isFavorite = isFavorite,
+                        dateTaken = photo.dateTaken
                     )
                 } else {
                     photo

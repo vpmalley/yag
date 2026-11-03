@@ -32,6 +32,7 @@ class DeviceAlbumsRetriever {
                 MediaStore.Images.Media.DATA,
                 MediaStore.Images.Media.TITLE,
                 MediaStore.Images.Media.DATE_ADDED,
+                MediaStore.Images.Media.DATE_TAKEN,
                 MediaStore.Images.Media.IS_FAVORITE
             ),
             null,
@@ -74,6 +75,13 @@ class DeviceAlbumsRetriever {
                 val dateAddedColumnIndex =
                     localImageCursor.getColumnIndex(MediaColumns.DATE_ADDED)
                 val dateAdded = localImageCursor.getString(dateAddedColumnIndex)
+                // DATE_ADDED is in seconds since epoch, Date expects millis
+                val additionDate = dateAdded?.toLongOrNull()?.takeIf { it > 0 }?.let { Date(it * 1000L) }
+                val dateTakenColumnIndex =
+                    localImageCursor.getColumnIndex(MediaColumns.DATE_TAKEN)
+                val dateTakenMillis = localImageCursor.getLong(dateTakenColumnIndex)
+                // DATE_TAKEN is in millis since epoch; 0 means unknown
+                val dateTaken = dateTakenMillis.takeIf { it > 0 }?.let { Date(it) }
                 val isFavoriteColumnIndex =
                     localImageCursor.getColumnIndex(MediaStore.Images.Media.IS_FAVORITE)
                 val isFavorite = localImageCursor.getInt(isFavoriteColumnIndex) != 0
@@ -91,8 +99,9 @@ class DeviceAlbumsRetriever {
                         photoUri,
                         fileName,
                         displayName,
-                        Date(dateAdded.toLong()),
-                        isFavorite
+                        additionDate,
+                        isFavorite,
+                        dateTaken
                     )
                 albumsById[bucketId]?.addPhoto(devicePhoto)
             }
